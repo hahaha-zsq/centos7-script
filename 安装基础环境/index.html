@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CentOS 7 基础环境安装脚本</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg: #09090b;
+            --fg: #fafafa;
+            --card: #0a0a0a;
+            --card-fg: #fafafa;
+            --primary: #fafafa;
+            --primary-fg: #18181b;
+            --secondary: #1c1c1f;
+            --muted: #27272a;
+            --muted-fg: #a1a1aa;
+            --border: #27272a;
+            --ring: #d4d4d8;
+            --radius: 0.5rem;
+            --green: #22c55e;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --cyan: #06b6d4;
+            --violet: #8b5cf6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* ===== Header ===== */
+        .header {
+            padding: 3.5rem 0 2.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+        }
+        .header .tags { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .tag {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.2rem 0.65rem; font-size: 0.6875rem; font-weight: 500;
+            border: 1px solid var(--border); border-radius: 9999px;
+            color: var(--muted-fg); background: var(--secondary);
+        }
+        .tag .dot { width: 5px; height: 5px; border-radius: 50%; }
+        .tag.green .dot { background: var(--green); }
+        .tag.blue .dot { background: var(--blue); }
+        .tag.amber .dot { background: var(--amber); }
+        .header h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; margin-bottom: 0.75rem; }
+        .header p { color: var(--muted-fg); font-size: 1rem; max-width: 640px; }
+
+        /* ===== Card ===== */
+        .card {
+            border: 1px solid var(--border); border-radius: var(--radius);
+            background: var(--card); padding: 1.5rem; margin-bottom: 1.5rem;
+        }
+        .card h2 {
+            font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em;
+            margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .card h2 .icon { color: var(--muted-fg); font-size: 0.9rem; }
+        .card .desc { color: var(--muted-fg); font-size: 0.8125rem; margin-bottom: 1rem; }
+
+        /* ===== Grid ===== */
+        .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+        @media (max-width: 768px) { .g2, .g3 { grid-template-columns: 1fr; } }
+
+        /* ===== Feature ===== */
+        .feat {
+            display: flex; align-items: flex-start; gap: 0.5rem;
+            padding: 0.625rem 0.75rem; border-radius: calc(var(--radius) - 2px);
+            background: var(--secondary); font-size: 0.8125rem; line-height: 1.5;
+        }
+        .feat .ck { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+        /* ===== Code ===== */
+        .cb {
+            position: relative; background: #18181b;
+            border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+            margin: 0.625rem 0; overflow: hidden;
+        }
+        .cb .cb-h {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.4rem 0.875rem; background: #1e1e22;
+            border-bottom: 1px solid var(--border); font-size: 0.6875rem; color: var(--muted-fg);
+        }
+        .cb .cb-h .lang { font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+        .cb .cp {
+            background: none; border: 1px solid var(--border); color: var(--muted-fg);
+            padding: 0.15rem 0.45rem; border-radius: 4px; cursor: pointer;
+            font-size: 0.625rem; font-family: 'Noto Sans SC', sans-serif; transition: all 0.15s;
+        }
+        .cb .cp:hover { color: var(--fg); border-color: var(--ring); }
+        .cb pre {
+            padding: 0.875rem; overflow-x: auto;
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem;
+            line-height: 1.7; color: #d4d4d8;
+        }
+        .cm { color: #52525b; } .kw { color: #c084fc; } .st { color: #86efac; }
+        .fl { color: #67e8f9; } .vr { color: #fbbf24; } .num { color: #f9a8d4; }
+
+        /* ===== Table ===== */
+        .tw { overflow-x: auto; border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+        thead { background: #1e1e22; }
+        th { text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: var(--muted-fg); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: rgba(39, 39, 42, 0.4); }
+        td code {
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem;
+            background: #27272a; padding: 0.12rem 0.35rem; border-radius: 3px; color: #e879f9;
+        }
+        .req { color: var(--red); font-weight: 500; }
+
+        /* ===== Tabs ===== */
+        .tabs { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 0.625rem 0; }
+        .tl { display: flex; background: #1e1e22; border-bottom: 1px solid var(--border); overflow-x: auto; }
+        .tb {
+            padding: 0.5rem 1.125rem; font-size: 0.8125rem; font-weight: 500;
+            background: none; border: none; border-bottom: 2px solid transparent;
+            color: var(--muted-fg); cursor: pointer; transition: all 0.15s;
+            font-family: 'Noto Sans SC', sans-serif; white-space: nowrap;
+        }
+        .tb:hover { color: var(--fg); }
+        .tb.on { color: var(--fg); border-bottom-color: var(--fg); }
+        .tc { display: none; }
+        .tc.on { display: block; }
+
+        /* ===== Steps ===== */
+        .step { display: flex; gap: 1rem; }
+        .step-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+        .step-n {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--secondary); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6875rem; font-weight: 600; z-index: 1;
+        }
+        .step-c { width: 1px; flex: 1; background: var(--border); min-height: 1rem; }
+        .step-b { padding-bottom: 1.25rem; }
+        .step-b h3 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .step-b p { color: var(--muted-fg); font-size: 0.8125rem; }
+
+        /* ===== Callout ===== */
+        .callout {
+            display: flex; gap: 0.625rem; padding: 0.875rem;
+            border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+            font-size: 0.8125rem; margin: 0.625rem 0;
+        }
+        .callout.warn { border-color: #854d0e; background: rgba(245, 158, 11, 0.06); }
+        .callout.warn .ci { color: var(--amber); }
+        .callout.danger { border-color: #991b1b; background: rgba(239, 68, 68, 0.06); }
+        .callout.danger .ci { color: var(--red); }
+        .callout.info { border-color: #1e40af; background: rgba(59, 130, 246, 0.06); }
+        .callout.info .ci { color: var(--blue); }
+        .ci { flex-shrink: 0; font-size: 0.95rem; line-height: 1.5; }
+
+        /* ===== Section ===== */
+        .section { margin-bottom: 2.5rem; }
+        .stitle {
+            font-size: 1.375rem; font-weight: 700; letter-spacing: -0.02em;
+            margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+        }
+
+        /* ===== Badges ===== */
+        .bs {
+            display: inline-flex; align-items: center;
+            padding: 0.1rem 0.45rem; font-size: 0.625rem; font-weight: 500;
+            border-radius: 9999px; border: 1px solid var(--border); color: var(--muted-fg);
+        }
+        .bs.ok { border-color: #166534; color: var(--green); background: rgba(34, 197, 94, 0.1); }
+
+        /* ===== Err tag ===== */
+        .et {
+            display: inline-block; padding: 0.08rem 0.35rem; border-radius: 3px;
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem;
+            background: rgba(239, 68, 68, 0.1); color: #fca5a5;
+        }
+
+        /* ===== Flow ===== */
+        .flow {
+            display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+            padding: 1.25rem; background: #18181b;
+            border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+        }
+        .fn {
+            padding: 0.4rem 1rem; background: var(--secondary);
+            border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+            font-size: 0.75rem; font-weight: 500; text-align: center; min-width: 180px;
+        }
+        .fn.pri { background: rgba(250, 250, 250, 0.07); border-color: var(--ring); }
+        .fa { color: var(--muted-fg); font-size: 0.8rem; line-height: 1; }
+
+        /* ===== Pkg grid ===== */
+        .pkg {
+            padding: 0.5rem 0.75rem; background: var(--secondary);
+            border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+            font-size: 0.75rem;
+        }
+        .pkg .name { font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--fg); }
+        .pkg .desc { color: var(--muted-fg); font-size: 0.6875rem; margin-top: 0.1rem; }
+
+        /* ===== Muted ===== */
+        .muted { color: var(--muted-fg); }
+        .sm { font-size: 0.8125rem; }
+        .mb1 { margin-bottom: 0.5rem; }
+        .mb2 { margin-bottom: 1rem; }
+        .mt1 { margin-top: 0.5rem; }
+        .mt2 { margin-top: 1rem; }
+
+        /* ===== Sep ===== */
+        .sep { height: 1px; background: var(--border); margin: 2rem 0; }
+
+        /* ===== Footer ===== */
+        .footer {
+            padding: 2rem 0; border-top: 1px solid var(--border);
+            text-align: center; color: var(--muted-fg); font-size: 0.6875rem;
+        }
+
+        /* ===== Syscfg block ===== */
+        .scfg {
+            background: #18181b; border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 2px); padding: 1rem 1.25rem;
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem;
+            line-height: 1.8; color: #d4d4d8; margin: 0.5rem 0;
+        }
+        .scfg .k { color: #67e8f9; }
+        .scfg .v { color: #86efac; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="tags">
+            <span class="tag green"><span class="dot"></span>CentOS 7</span>
+            <span class="tag blue"><span class="dot"></span>Bash Script</span>
+            <span class="tag amber"><span class="dot"></span>Root Required</span>
+        </div>
+        <h1>CentOS 7 基础环境安装脚本</h1>
+        <p>批量安装服务器基础环境，支持线上安装和本地离线安装两种模式，适用于生产环境部署和离线服务器环境。自动配置 Docker、系统参数和开发工具链。</p>
+    </div>
+
+    <!-- Features -->
+    <div class="section">
+        <div class="card">
+            <h2><span class="icon">&#9671;</span> 功能特性</h2>
+            <p class="desc">一键完成服务器基础环境初始化</p>
+            <div class="g3">
+                <div class="feat"><span class="ck">&#10003;</span> 线上 / 离线双模式安装</div>
+                <div class="feat"><span class="ck">&#10003;</span> 国内镜像源加速</div>
+                <div class="feat"><span class="ck">&#10003;</span> 自动安装 Docker + Compose</div>
+                <div class="feat"><span class="ck">&#10003;</span> 幂等设计，已装跳过</div>
+                <div class="feat"><span class="ck">&#10003;</span> 系统参数自动调优</div>
+                <div class="feat"><span class="ck">&#10003;</span> 试运行预览模式</div>
+                <div class="feat"><span class="ck">&#10003;</span> 详细结构化日志</div>
+                <div class="feat"><span class="ck">&#10003;</span> RPM 包批量下载</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Environment -->
+    <div class="section">
+        <h2 class="stitle">环境要求</h2>
+        <div class="g3">
+            <div class="feat"><span class="ck">&#10003;</span> CentOS 7.x</div>
+            <div class="feat"><span class="ck">&#10003;</span> root 权限</div>
+            <div class="feat"><span class="ck">&#10003;</span> 线上模式需网络</div>
+        </div>
+    </div>
+
+    <!-- Quick Start -->
+    <div class="section">
+        <h2 class="stitle">快速开始</h2>
+
+        <div class="tabs" id="mode-tabs">
+            <div class="tl">
+                <button class="tb on" data-tab="online">线上安装</button>
+                <button class="tb" data-tab="offline">离线安装</button>
+            </div>
+            <div class="tc on" data-tab="online">
+                <div class="card" style="border:none;margin:0;">
+                    <p class="sm muted mb1">适用于可访问互联网的服务器，从 YUM 仓库直接安装：</p>
+                    <div class="cb">
+                        <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+                        <pre><span class="cm"># 默认使用阿里云镜像</span>
+./setup_centos7.sh <span class="fl">-m</span> online
+
+<span class="cm"># 使用清华镜像源</span>
+./setup_centos7.sh <span class="fl">-m</span> online <span class="fl">-r</span> tsinghua
+
+<span class="cm"># 试运行（不实际执行）</span>
+./setup_centos7.sh <span class="fl">-m</span> online <span class="fl">-d</span></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="tc" data-tab="offline">
+                <div class="card" style="border:none;margin:0;">
+                    <p class="sm muted mb1">适用于无法访问互联网的服务器，需先在有网络的机器上下载 RPM 包：</p>
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-line"><div class="step-n">1</div><div class="step-c"></div></div>
+                            <div class="step-b">
+                                <h3>下载 RPM 包（有网络的服务器）</h3>
+                                <div class="cb">
+                                    <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+                                    <pre>chmod +x download_rpms.sh
+./download_rpms.sh
+<span class="cm"># 生成 rpms_centos7/ 目录</span></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-line"><div class="step-n">2</div><div class="step-c"></div></div>
+                            <div class="step-b">
+                                <h3>拷贝文件到目标服务器</h3>
+                                <p class="sm muted">将 <code>setup_centos7.sh</code> 和 <code>rpms_centos7/</code> 目录拷贝到目标服务器</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-line"><div class="step-n">3</div></div>
+                            <div class="step-b">
+                                <h3>执行安装（目标服务器）</h3>
+                                <div class="cb">
+                                    <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+                                    <pre>./setup_centos7.sh <span class="fl">-m</span> offline <span class="fl">-p</span> ./rpms_centos7</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="section">
+        <h2 class="stitle">参数说明</h2>
+        <div class="tw">
+            <table>
+                <thead><tr><th>短参数</th><th>长参数</th><th>说明</th><th>默认值</th></tr></thead>
+                <tbody>
+                    <tr><td><code>-m</code></td><td><code>--mode</code></td><td>安装模式: <code>online</code> 或 <code>offline</code></td><td><span class="req">必填</span></td></tr>
+                    <tr><td><code>-p</code></td><td><code>--pkg-dir</code></td><td>RPM 包目录路径（本地模式必填）</td><td>—</td></tr>
+                    <tr><td><code>-r</code></td><td><code>--repo</code></td><td>YUM 镜像源</td><td><code>aliyun</code></td></tr>
+                    <tr><td><code>-o</code></td><td><code>--output</code></td><td>日志输出目录</td><td><code>/var/log/env_setup</code></td></tr>
+                    <tr><td><code>-d</code></td><td><code>--dry-run</code></td><td>试运行模式</td><td><code>false</code></td></tr>
+                    <tr><td><code>-v</code></td><td><code>--verbose</code></td><td>启用详细输出</td><td><code>false</code></td></tr>
+                    <tr><td><code>-h</code></td><td><code>--help</code></td><td>显示帮助信息</td><td>—</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card mt2">
+            <h2>镜像源</h2>
+            <div class="g3">
+                <div class="pkg"><div class="name">aliyun</div><div class="desc">阿里云 · 默认 · 国内速度快</div></div>
+                <div class="pkg"><div class="name">tsinghua</div><div class="desc">清华大学 · TUNA 镜像站</div></div>
+                <div class="pkg"><div class="name">ustc</div><div class="desc">中国科学技术大学</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packages -->
+    <div class="section">
+        <h2 class="stitle">安装的软件包</h2>
+        <div class="tabs" id="pkg-tabs">
+            <div class="tl">
+                <button class="tb on" data-tab="pkg-base">基础工具</button>
+                <button class="tb" data-tab="pkg-dev">开发工具</button>
+                <button class="tb" data-tab="pkg-ops">运维工具</button>
+                <button class="tb" data-tab="pkg-ssh">SSH 工具</button>
+                <button class="tb" data-tab="pkg-docker">Docker</button>
+            </div>
+            <div class="tc on" data-tab="pkg-base">
+                <div class="g3" style="padding:1rem;">
+                    <div class="pkg"><div class="name">vim</div><div class="desc">文本编辑器</div></div>
+                    <div class="pkg"><div class="name">wget</div><div class="desc">下载工具</div></div>
+                    <div class="pkg"><div class="name">curl</div><div class="desc">HTTP 客户端</div></div>
+                    <div class="pkg"><div class="name">net-tools</div><div class="desc">网络工具集</div></div>
+                    <div class="pkg"><div class="name">lsof</div><div class="desc">列出打开文件</div></div>
+                    <div class="pkg"><div class="name">htop</div><div class="desc">进程监控</div></div>
+                    <div class="pkg"><div class="name">iotop</div><div class="desc">IO 监控</div></div>
+                    <div class="pkg"><div class="name">tree</div><div class="desc">目录树查看</div></div>
+                    <div class="pkg"><div class="name">zip / unzip</div><div class="desc">压缩解压</div></div>
+                    <div class="pkg"><div class="name">tar</div><div class="desc">归档工具</div></div>
+                    <div class="pkg"><div class="name">lrzsz</div><div class="desc">文件传输</div></div>
+                    <div class="pkg"><div class="name">telnet / nc</div><div class="desc">网络测试</div></div>
+                </div>
+            </div>
+            <div class="tc" data-tab="pkg-dev">
+                <div class="g3" style="padding:1rem;">
+                    <div class="pkg"><div class="name">gcc / gcc-c++</div><div class="desc">C/C++ 编译器</div></div>
+                    <div class="pkg"><div class="name">make</div><div class="desc">构建工具</div></div>
+                    <div class="pkg"><div class="name">cmake</div><div class="desc">跨平台构建</div></div>
+                    <div class="pkg"><div class="name">openssl-devel</div><div class="desc">OpenSSL 开发库</div></div>
+                    <div class="pkg"><div class="name">zlib-devel</div><div class="desc">压缩库</div></div>
+                    <div class="pkg"><div class="name">bzip2-devel</div><div class="desc">bzip2 开发库</div></div>
+                    <div class="pkg"><div class="name">readline-devel</div><div class="desc">行编辑库</div></div>
+                    <div class="pkg"><div class="name">sqlite-devel</div><div class="desc">SQLite 开发库</div></div>
+                    <div class="pkg"><div class="name">libffi-devel</div><div class="desc">FFI 开发库</div></div>
+                </div>
+            </div>
+            <div class="tc" data-tab="pkg-ops">
+                <div class="g3" style="padding:1rem;">
+                    <div class="pkg"><div class="name">sysstat</div><div class="desc">系统性能监控</div></div>
+                    <div class="pkg"><div class="name">tcpdump</div><div class="desc">网络抓包</div></div>
+                    <div class="pkg"><div class="name">nmap</div><div class="desc">网络扫描</div></div>
+                    <div class="pkg"><div class="name">psmisc</div><div class="desc">进程管理</div></div>
+                    <div class="pkg"><div class="name">bash-completion</div><div class="desc">命令补全</div></div>
+                    <div class="pkg"><div class="name">epel-release</div><div class="desc">EPEL 仓库</div></div>
+                </div>
+            </div>
+            <div class="tc" data-tab="pkg-ssh">
+                <div class="g3" style="padding:1rem;">
+                    <div class="pkg"><div class="name">sshpass</div><div class="desc">非交互式 SSH 密码输入</div></div>
+                    <div class="pkg"><div class="name">openssh-clients</div><div class="desc">SSH 客户端 (ssh, scp, sftp)</div></div>
+                    <div class="pkg"><div class="name">openssh-server</div><div class="desc">SSH 服务端</div></div>
+                </div>
+            </div>
+            <div class="tc" data-tab="pkg-docker">
+                <div class="g3" style="padding:1rem;">
+                    <div class="pkg"><div class="name">docker-ce</div><div class="desc">Docker 社区版引擎</div></div>
+                    <div class="pkg"><div class="name">docker-ce-cli</div><div class="desc">Docker 命令行工具</div></div>
+                    <div class="pkg"><div class="name">containerd.io</div><div class="desc">容器运行时</div></div>
+                    <div class="pkg"><div class="name">docker-compose</div><div class="desc">容器编排工具 · 最新稳定版</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Config -->
+    <div class="section">
+        <h2 class="stitle">系统配置</h2>
+        <p class="sm muted mb2">脚本会自动配置以下系统参数：</p>
+
+        <div class="g2">
+            <div class="card">
+                <h2>时区与语言</h2>
+                <div class="scfg">
+                    <span class="k">时区</span> <span class="v">Asia/Shanghai</span><br>
+                    <span class="k">语言</span> <span class="v">zh_CN.UTF-8</span>
+                </div>
+            </div>
+            <div class="card">
+                <h2>安全配置</h2>
+                <div class="scfg">
+                    <span class="k">SELinux</span> <span class="v">关闭</span><br>
+                    <span class="k">防火墙</span> <span class="v">关闭</span>
+                </div>
+                <div class="callout warn mt1" style="margin-bottom:0;">
+                    <span class="ci">&#9888;</span>
+                    <div>生产环境请按需配置安全策略</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>资源限制 <span class="muted sm">/etc/security/limits.conf</span></h2>
+            <div class="scfg">
+<span class="k">*</span> soft nofile <span class="v">65535</span>
+<span class="k">*</span> hard nofile <span class="v">65535</span>
+<span class="k">*</span> soft nproc  <span class="v">65535</span>
+<span class="k">*</span> hard nproc  <span class="v">65535</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>内核参数 <span class="muted sm">/etc/sysctl.d/99-envsetup.conf</span></h2>
+            <div class="scfg">
+<span class="k">net.ipv4.tcp_tw_reuse</span>         = <span class="v">1</span>
+<span class="k">net.ipv4.tcp_fin_timeout</span>       = <span class="v">30</span>
+<span class="k">net.ipv4.tcp_keepalive_time</span>    = <span class="v">1200</span>
+<span class="k">net.ipv4.tcp_max_syn_backlog</span>   = <span class="v">8192</span>
+<span class="k">net.ipv4.tcp_max_tw_buckets</span>    = <span class="v">5000</span>
+<span class="k">net.core.somaxconn</span>             = <span class="v">4096</span>
+<span class="k">net.core.netdev_max_backlog</span>    = <span class="v">4096</span>
+<span class="k">vm.swappiness</span>                  = <span class="v">10</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Docker 镜像加速</h2>
+            <div class="scfg">
+<span class="k">registry-mirrors</span>: [
+    <span class="st">"https://docker.1ms.run"</span>,
+    <span class="st">"https://docker.1panel.live"</span>,
+    <span class="st">"https://docker.ketches.cn"</span>
+]
+<span class="k">log-opts.max-size</span>: <span class="v">"100m"</span>
+<span class="k">log-opts.max-file</span>: <span class="v">"3"</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow -->
+    <div class="section">
+        <h2 class="stitle">工作流程</h2>
+        <div class="flow">
+            <div class="fn">检查依赖 (yum, rpm)</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">检查系统 (root, CentOS 版本)</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">配置 YUM 镜像源</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">遍历软件包列表 &#8594; 逐个安装</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">配置系统环境 (时区 / ulimit / sysctl)</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">安装 Docker + Docker Compose</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">输出安装汇总</div>
+        </div>
+    </div>
+
+    <!-- Batch Deploy -->
+    <div class="section">
+        <h2 class="stitle">批量部署</h2>
+        <div class="tabs" id="batch-tabs">
+            <div class="tl">
+                <button class="tb on" data-tab="batch-ssh">SSH 批量</button>
+                <button class="tb" data-tab="batch-ansible">Ansible</button>
+            </div>
+            <div class="tc on" data-tab="batch-ssh">
+                <div class="cb">
+                    <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+                    <pre><span class="vr">SERVERS</span>=(<span class="st">"192.168.1.10"</span> <span class="st">"192.168.1.11"</span> <span class="st">"192.168.1.12"</span>)
+
+<span class="kw">for</span> server <span class="kw">in</span> <span class="st">"${SERVERS[@]}"</span>; <span class="kw">do</span>
+    <span class="kw">echo</span> <span class="st">"部署到: $server"</span>
+
+    <span class="cm"># 拷贝文件</span>
+    scp setup_centos7.sh rpms_centos7/ root@<span class="vr">${server}</span>:/opt/
+
+    <span class="cm"># 执行安装</span>
+    ssh root@<span class="vr">${server}</span> <span class="st">"cd /opt && ./setup_centos7.sh -m offline -p ./rpms_centos7"</span>
+<span class="kw">done</span></pre>
+                </div>
+            </div>
+            <div class="tc" data-tab="batch-ansible">
+                <div class="cb">
+                    <div class="cb-h"><span class="lang">yaml</span><button class="cp" onclick="cp(this)">Copy</button></div>
+                    <pre><span class="fl">- name:</span> <span class="st">安装基础环境</span>
+  <span class="fl">hosts:</span> centos7_servers
+  <span class="fl">become:</span> <span class="kw">yes</span>
+  <span class="fl">tasks:</span>
+    - <span class="fl">name:</span> <span class="st">拷贝安装脚本</span>
+      <span class="fl">copy:</span>
+        <span class="fl">src:</span> setup_centos7.sh
+        <span class="fl">dest:</span> /opt/setup_centos7.sh
+        <span class="fl">mode:</span> <span class="st">'0755'</span>
+
+    - <span class="fl">name:</span> <span class="st">拷贝 RPM 包</span>
+      <span class="fl">copy:</span>
+        <span class="fl">src:</span> rpms_centos7/
+        <span class="fl">dest:</span> /opt/rpms_centos7/
+
+    - <span class="fl">name:</span> <span class="st">执行安装脚本</span>
+      <span class="fl">command:</span> /opt/setup_centos7.sh -m offline -p /opt/rpms_centos7
+      <span class="fl">args:</span>
+        <span class="fl">creates:</span> /var/log/env_setup/</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Troubleshooting -->
+    <div class="section">
+        <h2 class="stitle">常见问题</h2>
+        <div class="tw">
+            <table>
+                <thead><tr><th>错误信息</th><th>原因</th><th>解决方法</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="et">请使用root用户运行</span></td><td>权限不足</td><td><code>sudo ./setup_centos7.sh</code></td></tr>
+                    <tr><td><span class="et">RPM包目录不存在</span></td><td>路径错误</td><td>检查 <code>-p</code> 参数路径</td></tr>
+                    <tr><td><span class="et">未找到RPM包</span></td><td>包名不匹配</td><td>重新下载 RPM 包</td></tr>
+                    <tr><td><span class="et">安装失败</span></td><td>依赖冲突</td><td>检查日志，手动解决依赖</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="cb mt2">
+            <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+            <pre><span class="cm"># 查看安装日志</span>
+ls /var/log/env_setup/
+
+<span class="cm"># 启用调试模式</span>
+DEBUG=1 ./setup_centos7.sh <span class="fl">-m</span> online</pre>
+        </div>
+    </div>
+
+    <!-- Security -->
+    <div class="section">
+        <h2 class="stitle">安全注意事项</h2>
+        <div class="g2">
+            <div class="callout danger">
+                <span class="ci">&#9888;</span>
+                <div>
+                    <strong>SELinux 和防火墙</strong><br>
+                    脚本会关闭 SELinux 和防火墙。生产环境请按需配置安全策略，不要完全关闭。
+                </div>
+            </div>
+            <div class="callout warn">
+                <span class="ci">&#9888;</span>
+                <div>
+                    <strong>软件源安全</strong><br>
+                    线上安装请确保使用官方或可信镜像源。本地 RPM 包需从可信来源获取。
+                </div>
+            </div>
+        </div>
+        <div class="callout info mt1">
+            <span class="ci">&#9432;</span>
+            <div>
+                <strong>安装后建议</strong>：检查系统配置是否符合安全要求，根据业务需要调整防火墙规则和 SELinux 策略。
+            </div>
+        </div>
+    </div>
+
+    <!-- Design Principles -->
+    <div class="section">
+        <h2 class="stitle">脚本设计原则</h2>
+        <div class="g3">
+            <div class="feat"><span class="ck">&#10003;</span> <code style="font-family:'IBM Plex Mono',monospace;font-size:0.6875rem;background:#27272a;padding:0.1rem 0.3rem;border-radius:3px;">set -Eeuo pipefail</code> 严格模式</div>
+            <div class="feat"><span class="ck">&#10003;</span> ERR trap 错误捕获</div>
+            <div class="feat"><span class="ck">&#10003;</span> EXIT trap 清理临时文件</div>
+            <div class="feat"><span class="ck">&#10003;</span> 幂等设计，已安装跳过</div>
+            <div class="feat"><span class="ck">&#10003;</span> 结构化日志输出</div>
+            <div class="feat"><span class="ck">&#10003;</span> 输入验证和依赖检查</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        内部使用 · CentOS 7 基础环境安装脚本
+    </div>
+
+</div>
+
+<script>
+    document.querySelectorAll('.tabs').forEach(g => {
+        const btns = g.querySelectorAll('.tb');
+        const tcs = g.querySelectorAll('.tc');
+        btns.forEach(b => {
+            b.addEventListener('click', () => {
+                const t = b.dataset.tab;
+                btns.forEach(x => x.classList.remove('on'));
+                tcs.forEach(x => x.classList.remove('on'));
+                b.classList.add('on');
+                g.querySelector(`.tc[data-tab="${t}"]`).classList.add('on');
+            });
+        });
+    });
+
+    function cp(btn) {
+        const pre = btn.closest('.cb').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+            const o = btn.textContent;
+            btn.textContent = 'Copied';
+            btn.style.color = 'var(--green)';
+            setTimeout(() => { btn.textContent = o; btn.style.color = ''; }, 1500);
+        });
+    }
+</script>
+
+</body>
+</html>

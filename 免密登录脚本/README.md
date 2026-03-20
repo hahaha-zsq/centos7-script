@@ -47,7 +47,7 @@ sudo yum install sshpass        # CentOS/RHEL
 
 ### 1. 创建服务器列表文件
 
-创建 `servers.txt`，每行包含一台服务器的信息：
+创建 `servers.txt`，每行包含一台服务器(除自己以外需要互相免密认证)的信息：
 
 ```
 ip 用户名 密码
