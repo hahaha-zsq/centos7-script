@@ -1,0 +1,17 @@
+# 服务器列表格式: ip 用户名 密码
+# 每行一台服务器
+
+# ip root password
+
+
+root@154.217.249.230 root ZSQPzSzh@2026
+root@45.113.2.186 root WEBRWP5Q3icp
+root@117.72.69.244 root PzSzh@2026
+
+ssh root@117.72.69.244 "hostname"
+ssh root@45.113.2.186 "hostname"
+ssh root@154.217.249.230 "hostname"
+
+
+
+

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hadoop HDFS + YARN 集群部署脚本</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg:#09090b;--fg:#fafafa;--card:#0a0a0a;--primary:#fafafa;--primary-fg:#18181b;
+            --secondary:#1c1c1f;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;
+            --ring:#d4d4d8;--radius:.5rem;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;
+            --blue:#3b82f6;--cyan:#06b6d4;--violet:#8b5cf6;--orange:#f97316;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7;-webkit-font-smoothing:antialiased}
+        .container{max-width:960px;margin:0 auto;padding:0 1.5rem}
+
+        .header{padding:3.5rem 0 2.5rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem}
+        .header .tags{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+        .tag{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .65rem;font-size:.6875rem;font-weight:500;border:1px solid var(--border);border-radius:9999px;color:var(--muted-fg);background:var(--secondary)}
+        .tag .dot{width:5px;height:5px;border-radius:50%}
+        .tag.green .dot{background:var(--green)}.tag.blue .dot{background:var(--blue)}.tag.orange .dot{background:var(--orange)}.tag.violet .dot{background:var(--violet)}
+        .header h1{font-size:2.25rem;font-weight:700;letter-spacing:-.025em;line-height:1.2;margin-bottom:.75rem}
+        .header p{color:var(--muted-fg);font-size:1rem;max-width:640px}
+
+        .card{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);padding:1.5rem;margin-bottom:1.5rem}
+        .card h2{font-size:1.125rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+        .card h2 .icon{color:var(--muted-fg);font-size:.9rem}
+        .card .desc{color:var(--muted-fg);font-size:.8125rem;margin-bottom:1rem}
+
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+        .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+        @media(max-width:768px){.g2,.g3{grid-template-columns:1fr}}
+
+        .feat{display:flex;align-items:flex-start;gap:.5rem;padding:.625rem .75rem;border-radius:calc(var(--radius) - 2px);background:var(--secondary);font-size:.8125rem;line-height:1.5}
+        .feat .ck{color:var(--green);flex-shrink:0;margin-top:1px}
+
+        .cb{position:relative;background:#18181b;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);margin:.625rem 0;overflow:hidden}
+        .cb .cb-h{display:flex;align-items:center;justify-content:space-between;padding:.4rem .875rem;background:#1e1e22;border-bottom:1px solid var(--border);font-size:.6875rem;color:var(--muted-fg)}
+        .cb .cb-h .lang{font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+        .cb .cp{background:none;border:1px solid var(--border);color:var(--muted-fg);padding:.15rem .45rem;border-radius:4px;cursor:pointer;font-size:.625rem;font-family:'Noto Sans SC',sans-serif;transition:all .15s}
+        .cb .cp:hover{color:var(--fg);border-color:var(--ring)}
+        .cb pre{padding:.875rem;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:.75rem;line-height:1.7;color:#d4d4d8}
+        .cm{color:#52525b}.kw{color:#c084fc}.st{color:#86efac}.fl{color:#67e8f9}.vr{color:#fbbf24}.num{color:#f9a8d4}.tag-c{color:#fb923c}
+
+        .tw{overflow-x:auto;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px)}
+        table{width:100%;border-collapse:collapse;font-size:.8125rem}
+        thead{background:#1e1e22}
+        th{text-align:left;padding:.5rem 1rem;font-weight:500;color:var(--muted-fg);border-bottom:1px solid var(--border);white-space:nowrap}
+        td{padding:.5rem 1rem;border-bottom:1px solid var(--border)}
+        tr:last-child td{border-bottom:none}
+        tr:hover{background:rgba(39,39,42,.4)}
+        td code{font-family:'IBM Plex Mono',monospace;font-size:.6875rem;background:#27272a;padding:.12rem .35rem;border-radius:3px;color:#e879f9}
+        .req{color:var(--red);font-weight:500}
+
+        .tabs{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:.625rem 0}
+        .tl{display:flex;background:#1e1e22;border-bottom:1px solid var(--border);overflow-x:auto}
+        .tb{padding:.5rem 1.125rem;font-size:.8125rem;font-weight:500;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted-fg);cursor:pointer;transition:all .15s;font-family:'Noto Sans SC',sans-serif;white-space:nowrap}
+        .tb:hover{color:var(--fg)}.tb.on{color:var(--fg);border-bottom-color:var(--fg)}
+        .tc{display:none}.tc.on{display:block}
+
+        .step{display:flex;gap:1rem}
+        .step-line{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+        .step-n{width:26px;height:26px;border-radius:50%;background:var(--secondary);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.6875rem;font-weight:600;z-index:1}
+        .step-c{width:1px;flex:1;background:var(--border);min-height:1rem}
+        .step-b{padding-bottom:1.25rem}
+        .step-b h3{font-size:.875rem;font-weight:600;margin-bottom:.25rem}
+        .step-b p{color:var(--muted-fg);font-size:.8125rem}
+
+        .callout{display:flex;gap:.625rem;padding:.875rem;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);font-size:.8125rem;margin:.625rem 0}
+        .callout.warn{border-color:#854d0e;background:rgba(245,158,11,.06)}.callout.warn .ci{color:var(--amber)}
+        .callout.danger{border-color:#991b1b;background:rgba(239,68,68,.06)}.callout.danger .ci{color:var(--red)}
+        .callout.info{border-color:#1e40af;background:rgba(59,130,246,.06)}.callout.info .ci{color:var(--blue)}
+        .ci{flex-shrink:0;font-size:.95rem;line-height:1.5}
+
+        .section{margin-bottom:2.5rem}
+        .stitle{font-size:1.375rem;font-weight:700;letter-spacing:-.02em;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+
+        .flow{display:flex;flex-direction:column;align-items:center;gap:.15rem;padding:1.25rem;background:#18181b;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px)}
+        .fn{padding:.4rem 1rem;background:var(--secondary);border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);font-size:.75rem;font-weight:500;text-align:center;min-width:200px}
+        .fn.pri{background:rgba(250,250,250,.07);border-color:var(--ring)}
+        .fa{color:var(--muted-fg);font-size:.8rem;line-height:1}
+
+        .scfg{background:#18181b;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:.75rem;line-height:1.8;color:#d4d4d8;margin:.5rem 0}
+        .scfg .k{color:#67e8f9}.scfg .v{color:#86efac}.scfg .p{color:#c084fc}
+
+        .muted{color:var(--muted-fg)}.sm{font-size:.8125rem}.mb1{margin-bottom:.5rem}.mb2{margin-bottom:1rem}.mt1{margin-top:.5rem}.mt2{margin-top:1rem}
+        .footer{padding:2rem 0;border-top:1px solid var(--border);text-align:center;color:var(--muted-fg);font-size:.6875rem}
+
+        .cfg-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);overflow:hidden;margin-bottom:1.25rem}
+        .cfg-card .cfg-head{padding:.75rem 1.25rem;background:#1e1e22;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+        .cfg-card .cfg-head h3{font-size:.875rem;font-weight:600;font-family:'IBM Plex Mono',monospace}
+        .cfg-card .cfg-head .badge{font-size:.625rem;padding:.1rem .4rem;border:1px solid var(--border);border-radius:9999px;color:var(--muted-fg)}
+        .cfg-card .cfg-body{padding:0}
+        .cfg-card .cfg-body pre{padding:1rem;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:.75rem;line-height:1.7;color:#d4d4d8}
+
+        .prop-grid{display:grid;grid-template-columns:1fr;gap:0}
+        .prop{display:grid;grid-template-columns:280px 1fr;gap:1rem;padding:.625rem 1rem;border-bottom:1px solid var(--border);font-size:.8125rem;align-items:start}
+        .prop:last-child{border-bottom:none}
+        .prop .pk{font-family:'IBM Plex Mono',monospace;color:#67e8f9;font-size:.75rem;word-break:break-all}
+        .prop .pv{color:var(--muted-fg)}
+        .prop .pv strong{color:var(--fg);font-weight:500}
+        @media(max-width:640px){.prop{grid-template-columns:1fr;gap:.25rem}}
+
+        .arch{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1.5rem;background:#18181b;border:1px solid var(--border);border-radius:var(--radius)}
+        .arch-col{display:flex;flex-direction:column;gap:.5rem}
+        .arch-col h3{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-fg);margin-bottom:.25rem}
+        .arch-node{padding:.5rem .875rem;background:var(--secondary);border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);font-size:.8125rem;font-weight:500;text-align:center}
+        .arch-node.pri{background:rgba(250,250,250,.07);border-color:var(--ring)}
+        .arch-node .sub{font-size:.6875rem;color:var(--muted-fg);font-weight:400;margin-top:.1rem}
+        .arch-bridge{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.375rem 0;color:var(--muted-fg);font-size:.75rem;grid-column:1/-1}
+
+        /* 3-node layout */
+        .nodes-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+        @media(max-width:768px){.nodes-grid{grid-template-columns:1fr}}
+        .node-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);overflow:hidden}
+        .node-head{padding:.75rem 1rem;border-bottom:1px solid var(--border)}
+        .node-head .node-label{font-size:.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;margin-bottom:.25rem}
+        .master-card .node-label{color:var(--green)}
+        .worker-card .node-label{color:var(--blue)}
+        .master-card .node-head{border-left:3px solid var(--green)}
+        .worker-card .node-head{border-left:3px solid var(--blue)}
+        .node-head h3{font-size:1.125rem;font-weight:700;font-family:'IBM Plex Mono',monospace}
+        .node-services{padding:.5rem}
+        .svc{display:flex;align-items:flex-start;gap:.625rem;padding:.5rem;border-radius:calc(var(--radius) - 2px);transition:background .15s}
+        .svc:hover{background:var(--secondary)}
+        .svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:.375rem;background:var(--green)}
+        .svc strong{font-size:.8125rem;font-weight:600}
+        .svc-desc{font-size:.6875rem;color:var(--muted-fg);line-height:1.4;margin-top:.1rem}
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="tags">
+            <span class="tag green"><span class="dot"></span>Hadoop 3.3.6</span>
+            <span class="tag blue"><span class="dot"></span>HDFS + YARN</span>
+            <span class="tag orange"><span class="dot"></span>集群部署</span>
+        </div>
+        <h1>02_deploy_hadoop.sh</h1>
+        <p>自动化部署 Hadoop HDFS 分布式文件系统和 YARN 资源管理器集群，支持在线下载和离线安装两种模式，自动完成配置生成、分发、格式化和启动。</p>
+    </div>
+
+    <!-- 3-Node Cluster Layout -->
+    <div class="section">
+        <h2 class="stitle">3 节点集群部署方案</h2>
+        <p class="sm muted mb2">以下是 3 台服务器组成 Hadoop 集群时各节点的角色分配和服务分布：</p>
+
+        <div class="nodes-grid">
+            <!-- Node 1 -->
+            <div class="node-card master-card">
+                <div class="node-head">
+                    <div class="node-label">MASTER</div>
+                    <h3>node1</h3>
+                </div>
+                <div class="node-services">
+                    <div class="svc svc-core">
+                        <span class="svc-dot"></span>
+                        <div><strong>NameNode</strong><div class="svc-desc">HDFS 元数据管理，维护文件目录树和数据块映射</div></div>
+                    </div>
+                    <div class="svc svc-core">
+                        <span class="svc-dot"></span>
+                        <div><strong>ResourceManager</strong><div class="svc-desc">YARN 资源调度中心，分配容器和管理集群资源</div></div>
+                    </div>
+                    <div class="svc svc-core">
+                        <span class="svc-dot" style="background:var(--cyan)"></span>
+                        <div><strong>DataNode</strong><div class="svc-desc">同时承担数据存储，增加可用存储空间和数据本地性</div></div>
+                    </div>
+                    <div class="svc svc-core">
+                        <span class="svc-dot" style="background:var(--cyan)"></span>
+                        <div><strong>NodeManager</strong><div class="svc-desc">同时承担容器管理，增加集群可用计算资源</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--violet)"></span>
+                        <div><strong>ZooKeeper</strong><div class="svc-desc">分布式协调服务，为其他组件提供一致性支持</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--orange)"></span>
+                        <div><strong>Kafka Broker</strong><div class="svc-desc">消息队列代理，处理实时数据流</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Node 2 -->
+            <div class="node-card worker-card">
+                <div class="node-head">
+                    <div class="node-label">WORKER</div>
+                    <h3>node2</h3>
+                </div>
+                <div class="node-services">
+                    <div class="svc svc-core">
+                        <span class="svc-dot"></span>
+                        <div><strong>DataNode</strong><div class="svc-desc">HDFS 数据存储节点，管理本地磁盘上的数据块</div></div>
+                    </div>
+                    <div class="svc svc-core">
+                        <span class="svc-dot"></span>
+                        <div><strong>NodeManager</strong><div class="svc-desc">YARN 工作节点代理，管理本节点的容器生命周期</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--cyan)"></span>
+                        <div><strong>Secondary NameNode</strong><div class="svc-desc">定期合并 NameNode 的编辑日志和镜像文件</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--violet)"></span>
+                        <div><strong>ZooKeeper</strong><div class="svc-desc">分布式协调服务副本</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--orange)"></span>
+                        <div><strong>Kafka Broker</strong><div class="svc-desc">消息队列代理副本</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Node 3 -->
+            <div class="node-card worker-card">
+                <div class="node-head">
+                    <div class="node-label">WORKER</div>
+                    <h3>node3</h3>
+                </div>
+                <div class="node-services">
+                    <div class="svc svc-core">
+                        <span class="svc-dot"></span>
+                        <div><strong>DataNode</strong><div class="svc-desc">HDFS 数据存储节点，管理本地磁盘上的数据块</div></div>
+                    </div>
+                    <div class="svc svc-core">
+                        <span class="svc-dot"></span>
+                        <div><strong>NodeManager</strong><div class="svc-desc">YARN 工作节点代理，管理本节点的容器生命周期</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--violet)"></span>
+                        <div><strong>ZooKeeper</strong><div class="svc-desc">分布式协调服务副本，形成 3 节点仲裁</div></div>
+                    </div>
+                    <div class="svc svc-data">
+                        <span class="svc-dot" style="background:var(--orange)"></span>
+                        <div><strong>Kafka Broker</strong><div class="svc-desc">消息队列代理副本</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service summary table -->
+        <div class="tw mt2">
+            <table>
+                <thead><tr><th>服务</th><th>所在节点</th><th>端口</th><th>作用</th></tr></thead>
+                <tbody>
+                    <tr><td><code>NameNode</code></td><td>node1</td><td>9870 (Web) / 9000 (RPC)</td><td>HDFS 主节点，管理元数据，客户端通过它读写文件</td></tr>
+                    <tr><td><code>ResourceManager</code></td><td>node1</td><td>8088 (Web)</td><td>YARN 主节点，接收作业请求并分配资源给各 NodeManager</td></tr>
+                    <tr><td><code>DataNode</code></td><td>node1, node2, node3</td><td>9864</td><td>存储实际数据块，定期向 NameNode 汇报块状态</td></tr>
+                    <tr><td><code>NodeManager</code></td><td>node1, node2, node3</td><td>8042</td><td>管理容器（Container）的启动、监控和资源使用</td></tr>
+                    <tr><td><code>Secondary NameNode</code></td><td>node2</td><td>9868 (Web)</td><td>定期 checkpoint，合并 fsimage + edits，防止单点故障恢复太慢</td></tr>
+                    <tr><td><code>ZooKeeper</code></td><td>node1, node2, node3</td><td>2181</td><td>3 节点选举仲裁，提供分布式锁和配置管理</td></tr>
+                    <tr><td><code>Kafka Broker</code></td><td>node1, node2, node3</td><td>9092</td><td>分布式消息队列，Flink 实时消费的数据源</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="callout info mt1">
+            <span class="ci">&#9432;</span>
+            <div>
+                <strong>HDFS 副本数 = 2</strong> — 3 节点集群中所有节点均运行 DataNode（共 3 个），HDFS 副本数默认设为 2。若需更高容错能力，可设为 3（每个数据块在全部 3 个 DataNode 上各存一份）。Kafka 和 ZooKeeper 同样部署在全部 3 个节点以保证高可用。
+            </div>
+        </div>
+    </div>
+
+    <!-- Architecture Overview -->
+    <div class="section">
+        <h2 class="stitle">HDFS + YARN 架构与通信方式</h2>
+        <p class="sm muted mb2">3 节点 Hadoop 集群的完整架构，包含 HDFS 文件系统、YARN 资源管理和各组件之间的通信协议与端口。</p>
+
+        <!-- SVG Architecture Diagram -->
+        <div style="background:#18181b;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;overflow-x:auto;margin-bottom:1.5rem">
+            <svg viewBox="0 0 880 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;display:block;margin:0 auto">
+                <defs>
+                    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a1a1aa"/></marker>
+                    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#22c55e"/></marker>
+                    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/></marker>
+                    <marker id="arr-c" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#06b6d4"/></marker>
+                    <marker id="arr-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f97316"/></marker>
+                </defs>
+
+                <!-- Title -->
+                <text x="440" y="28" text-anchor="middle" fill="#fafafa" font-size="14" font-weight="700" font-family="'Noto Sans SC',sans-serif">Hadoop 3 节点集群架构与通信</text>
+
+                <!-- ============ Client ============ -->
+                <rect x="340" y="45" width="200" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="440" y="72" text-anchor="middle" fill="#fafafa" font-size="13" font-weight="600" font-family="'Noto Sans SC',sans-serif">Client 客户端</text>
+
+                <!-- Client → NameNode -->
+                <line x1="400" y1="89" x2="200" y2="145" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arr-g)" stroke-dasharray="5,3"/>
+                <text x="270" y="110" fill="#22c55e" font-size="9" font-family="'IBM Plex Mono',monospace">RPC :9000 文件操作</text>
+
+                <!-- Client → ResourceManager -->
+                <line x1="480" y1="89" x2="680" y2="145" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-b)" stroke-dasharray="5,3"/>
+                <text x="610" y="110" fill="#3b82f6" font-size="9" font-family="'IBM Plex Mono',monospace">提交作业 :8088</text>
+
+                <!-- ============ node1 (Master) ============ -->
+                <rect x="40" y="135" width="320" height="260" rx="8" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="6,3"/>
+                <text x="50" y="155" fill="#22c55e" font-size="10" font-weight="600" font-family="'IBM Plex Mono',monospace">node1 (Master)</text>
+
+                <!-- NameNode -->
+                <rect x="60" y="170" width="130" height="50" rx="6" fill="#1c1c1f" stroke="#22c55e" stroke-width="1.5"/>
+                <text x="125" y="192" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="600">NameNode</text>
+                <text x="125" y="208" text-anchor="middle" fill="#a1a1aa" font-size="8">元数据 :9000/:9870</text>
+
+                <!-- ResourceManager -->
+                <rect x="210" y="170" width="130" height="50" rx="6" fill="#1c1c1f" stroke="#3b82f6" stroke-width="1.5"/>
+                <text x="275" y="192" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="600">ResourceManager</text>
+                <text x="275" y="208" text-anchor="middle" fill="#a1a1aa" font-size="8">资源调度 :8088</text>
+
+                <!-- DataNode on node1 -->
+                <rect x="60" y="250" width="130" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="125" y="270" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="500">DataNode</text>
+                <text x="125" y="284" text-anchor="middle" fill="#a1a1aa" font-size="8">数据块 :9864</text>
+
+                <!-- NodeManager on node1 -->
+                <rect x="210" y="250" width="130" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="275" y="270" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="500">NodeManager</text>
+                <text x="275" y="284" text-anchor="middle" fill="#a1a1aa" font-size="8">容器管理 :8042</text>
+
+                <!-- NameNode ↔ DataNode internal -->
+                <line x1="125" y1="220" x2="125" y2="250" stroke="#a1a1aa" stroke-width="1" marker-end="url(#arr)"/>
+                <text x="135" y="240" fill="#a1a1aa" font-size="7.5">心跳/块汇报</text>
+
+                <!-- RM ↔ NM internal -->
+                <line x1="275" y1="220" x2="275" y2="250" stroke="#a1a1aa" stroke-width="1" marker-end="url(#arr)"/>
+                <text x="285" y="240" fill="#a1a1aa" font-size="7.5">心跳/状态</text>
+
+                <!-- Secondary NN on node1 area (shown as optional) -->
+                <rect x="60" y="320" width="130" height="36" rx="6" fill="#1c1c1f" stroke="#27272a" stroke-dasharray="3,2"/>
+                <text x="125" y="342" text-anchor="middle" fill="#a1a1aa" font-size="9">SecondaryNameNode</text>
+
+                <!-- NN → SNN checkpoint -->
+                <line x1="125" y1="220" x2="125" y2="320" stroke="#06b6d4" stroke-width="1" marker-end="url(#arr-c)" stroke-dasharray="3,3"/>
+                <text x="135" y="290" fill="#06b6d4" font-size="7.5">checkpoint</text>
+
+                <!-- ============ node2 (Worker) ============ -->
+                <rect x="40" y="420" width="320" height="140" rx="8" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+                <text x="50" y="440" fill="#3b82f6" font-size="10" font-weight="600" font-family="'IBM Plex Mono',monospace">node2 (Worker)</text>
+
+                <rect x="60" y="455" width="130" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="125" y="475" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="500">DataNode</text>
+                <text x="125" y="489" text-anchor="middle" fill="#a1a1aa" font-size="8">数据块 :9864</text>
+
+                <rect x="210" y="455" width="130" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="275" y="475" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="500">NodeManager</text>
+                <text x="275" y="489" text-anchor="middle" fill="#a1a1aa" font-size="8">容器管理 :8042</text>
+
+                <!-- SNN on node2 -->
+                <rect x="60" y="515" width="130" height="32" rx="6" fill="#1c1c1f" stroke="#06b6d4" stroke-dasharray="3,2"/>
+                <text x="125" y="535" text-anchor="middle" fill="#06b6d4" font-size="9">SecondaryNameNode :9868</text>
+
+                <!-- ============ node3 (Worker) ============ -->
+                <rect x="400" y="420" width="240" height="140" rx="8" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+                <text x="410" y="440" fill="#3b82f6" font-size="10" font-weight="600" font-family="'IBM Plex Mono',monospace">node3 (Worker)</text>
+
+                <rect x="420" y="455" width="130" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="485" y="475" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="500">DataNode</text>
+                <text x="485" y="489" text-anchor="middle" fill="#a1a1aa" font-size="8">数据块 :9864</text>
+
+                <rect x="420" y="515" width="130" height="44" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="485" y="535" text-anchor="middle" fill="#fafafa" font-size="11" font-weight="500">NodeManager</text>
+                <text x="485" y="549" text-anchor="middle" fill="#a1a1aa" font-size="8">容器管理 :8042</text>
+
+                <!-- ============ HDFS Communication ============ -->
+                <!-- NN → DN node1 -->
+                <line x1="125" y1="220" x2="125" y2="250" stroke="#22c55e" stroke-width="1.2" marker-end="url(#arr-g)"/>
+                <!-- NN → DN node2 -->
+                <line x1="100" y1="220" x2="100" y2="455" stroke="#22c55e" stroke-width="1.2" marker-end="url(#arr-g)"/>
+                <text x="48" y="350" fill="#22c55e" font-size="8" font-family="'IBM Plex Mono',monospace" transform="rotate(-90,48,350)">心跳/块汇报 :9864</text>
+                <!-- NN → DN node3 -->
+                <line x1="190" y1="210" x2="485" y2="455" stroke="#22c55e" stroke-width="1.2" marker-end="url(#arr-g)"/>
+                <text x="310" y="320" fill="#22c55e" font-size="8" font-family="'IBM Plex Mono',monospace">Heartbeat / Block Report :9864</text>
+
+                <!-- NN → SNN checkpoint -->
+                <line x1="90" y1="220" x2="90" y2="515" stroke="#06b6d4" stroke-width="1" marker-end="url(#arr-c)" stroke-dasharray="4,2"/>
+                <text x="20" y="400" fill="#06b6d4" font-size="7.5" transform="rotate(-90,20,400)">checkpoint :9868</text>
+
+                <!-- ============ YARN Communication ============ -->
+                <!-- RM → NM node1 -->
+                <line x1="275" y1="220" x2="275" y2="250" stroke="#3b82f6" stroke-width="1.2" marker-end="url(#arr-b)"/>
+                <!-- RM → NM node2 -->
+                <line x1="310" y1="220" x2="310" y2="455" stroke="#3b82f6" stroke-width="1.2" marker-end="url(#arr-b)"/>
+                <text x="320" y="350" fill="#3b82f6" font-size="8" font-family="'IBM Plex Mono',monospace" transform="rotate(-90,320,350)">心跳/资源状态 :8042</text>
+                <!-- RM → NM node3 -->
+                <line x1="340" y1="210" x2="485" y2="515" stroke="#3b82f6" stroke-width="1.2" marker-end="url(#arr-b)"/>
+                <text x="420" y="350" fill="#3b82f6" font-size="8" font-family="'IBM Plex Mono',monospace">Container 分配 :8042</text>
+
+                <!-- ============ DN Replication ============ -->
+                <line x1="190" y1="477" x2="420" y2="477" stroke="#f97316" stroke-width="1.5" marker-end="url(#arr-o)" marker-start="url(#arr-o)"/>
+                <text x="305" y="470" text-anchor="middle" fill="#f97316" font-size="8" font-family="'IBM Plex Mono',monospace">数据块复制 :9866</text>
+
+                <!-- ============ Legend ============ -->
+                <rect x="680" y="135" width="180" height="180" rx="6" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="690" y="158" fill="#fafafa" font-size="10" font-weight="600">通信图例</text>
+
+                <line x1="690" y1="175" x2="720" y2="175" stroke="#22c55e" stroke-width="1.5"/>
+                <text x="728" y="179" fill="#22c55e" font-size="9">HDFS 通信 (NameNode ↔ DataNode)</text>
+
+                <line x1="690" y1="195" x2="720" y2="195" stroke="#3b82f6" stroke-width="1.5"/>
+                <text x="728" y="199" fill="#3b82f6" font-size="9">YARN 通信 (RM ↔ NodeManager)</text>
+
+                <line x1="690" y1="215" x2="720" y2="215" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4,2"/>
+                <text x="728" y="219" fill="#06b6d4" font-size="9">Checkpoint (NN ↔ SNN)</text>
+
+                <line x1="690" y1="235" x2="720" y2="235" stroke="#f97316" stroke-width="1.5"/>
+                <text x="728" y="239" fill="#f97316" font-size="9">数据块复制 (DN ↔ DN)</text>
+
+                <line x1="690" y1="255" x2="720" y2="255" stroke="#a1a1aa" stroke-width="1" stroke-dasharray="4,3"/>
+                <text x="728" y="259" fill="#a1a1aa" font-size="9">Client 请求</text>
+
+                <rect x="690" y="270" width="10" height="10" rx="2" fill="#1c1c1f" stroke="#22c55e" stroke-width="1.5"/>
+                <text x="708" y="280" fill="#a1a1aa" font-size="9">Master 进程</text>
+
+                <rect x="690" y="290" width="10" height="10" rx="2" fill="#1c1c1f" stroke="#27272a"/>
+                <text x="708" y="300" fill="#a1a1aa" font-size="9">Worker 进程</text>
+            </svg>
+        </div>
+
+        <!-- Communication Details -->
+        <div class="tabs" id="comm-tabs">
+            <div class="tl">
+                <button class="tb on" data-tab="comm-hdfs">HDFS 通信</button>
+                <button class="tb" data-tab="comm-yarn">YARN 通信</button>
+                <button class="tb" data-tab="comm-client">客户端读写流程</button>
+            </div>
+
+            <!-- HDFS Communication -->
+            <div class="tc on" data-tab="comm-hdfs">
+                <div class="card" style="border:none;margin:0">
+                    <div class="tw">
+                        <table>
+                            <thead><tr><th>通信方向</th><th>协议</th><th>端口</th><th>数据内容</th><th>频率</th></tr></thead>
+                            <tbody>
+                                <tr><td><code style="color:#22c55e">DataNode → NameNode</code></td><td>Heartbeat</td><td>9000 (RPC)</td><td>节点存活信号，包含磁盘使用率、剩余空间</td><td>默认 3 秒</td></tr>
+                                <tr><td><code style="color:#22c55e">DataNode → NameNode</code></td><td>Block Report</td><td>9000 (RPC)</td><td>该节点上所有数据块的列表和校验和</td><td>默认 6 小时</td></tr>
+                                <tr><td><code style="color:#22c55e">NameNode → DataNode</code></td><td>RPC 指令</td><td>9000</td><td>复制/删除/移动数据块的指令</td><td>按需</td></tr>
+                                <tr><td><code style="color:#f97316">DataNode ↔ DataNode</code></td><td>DataStream</td><td>9866 (Pipeline)</td><td>数据块副本的管道传输（写入时串行复制）</td><td>写入时</td></tr>
+                                <tr><td><code style="color:#06b6d4">NameNode → SecondaryNN</code></td><td>HTTP</td><td>9868</td><td>fsimage + edits 文件，用于 checkpoint 合并</td><td>默认 1 小时</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="callout info mt1" style="margin-bottom:0">
+                        <span class="ci">&#9432;</span>
+                        <div><strong>NameNode 如何知道数据存放在哪些 DataNode？</strong><br>DataNode 启动后会向 NameNode 注册，之后定期发送 Heartbeat（证明存活）和 Block Report（汇报持有的数据块）。NameNode 在内存中维护块映射表，不需要持久化存储块位置信息。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YARN Communication -->
+            <div class="tc" data-tab="comm-yarn">
+                <div class="card" style="border:none;margin:0">
+                    <div class="tw">
+                        <table>
+                            <thead><tr><th>通信方向</th><th>协议</th><th>端口</th><th>数据内容</th><th>频率</th></tr></thead>
+                        <tbody>
+                            <tr><td><code style="color:#3b82f6">NodeManager → ResourceManager</code></td><td>Heartbeat</td><td>8030 (RM Scheduler)</td><td>节点资源使用情况（CPU/内存已用/剩余）、运行中的容器状态</td><td>默认 1 秒</td></tr>
+                            <tr><td><code style="color:#3b82f6">ResourceManager → NodeManager</code></td><td>RPC 指令</td><td>8042</td><td>启动/杀死容器的指令，包含容器资源分配</td><td>按需</td></tr>
+                            <tr><td><code style="color:#3b82f6">Container → NodeManager</code></td><td>本地通信</td><td>本地</td><td>容器状态上报、日志本地写入</td><td>运行中</td></tr>
+                            <tr><td><code style="color:#3b82f6">ApplicationMaster → ResourceManager</code></td><td>RPC</td><td>8030</td><td>申请/释放资源，汇报任务进度</td><td>按需</td></tr>
+                            <tr><td><code style="color:#3b82f6">ApplicationMaster → NodeManager</code></td><td>RPC</td><td>8042</td><td>管理容器生命周期（启动、停止、查询状态）</td><td>按需</td></tr>
+                        </tbody>
+                        </table>
+                    </div>
+                    <div class="callout info mt1" style="margin-bottom:0">
+                        <span class="ci">&#9432;</span>
+                        <div><strong>YARN 作业执行流程：</strong><br>1. Client 提交作业到 ResourceManager<br>2. RM 在某个 NodeManager 上启动 ApplicationMaster<br>3. AM 向 RM 申请资源（Container）<br>4. RM 分配 Container 到各 NodeManager<br>5. AM 在 Container 中启动任务（Map/Reduce）<br>6. 任务完成后 AM 向 RM 注销</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Client Read/Write Flow -->
+            <div class="tc" data-tab="comm-client">
+                <div class="card" style="border:none;margin:0">
+                    <h2 style="margin-bottom:.75rem">HDFS 写入流程 (Pipeline)</h2>
+                    <div class="flow" style="align-items:stretch">
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">1</div>
+                            <div><strong style="font-size:.8125rem">Client → NameNode :9000</strong><div class="svc-desc">请求创建文件，NameNode 检查权限并记录元数据，返回一组 DataNode 列表</div></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">2</div>
+                            <div><strong style="font-size:.8125rem">Client → DN1 → DN2 → DN3 (Pipeline)</strong><div class="svc-desc">Client 建立到第一个 DataNode 的管道，数据以 Packet 为单位沿管道串行传输，每个 DN 确认收到后传给下一个</div></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">3</div>
+                            <div><strong style="font-size:.8125rem">ACK 沿管道反向返回</strong><div class="svc-desc">最后一个 DN 确认后，ACK 沿管道反向传回 Client，表示数据已持久化到所有副本</div></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">4</div>
+                            <div><strong style="font-size:.8125rem">Client → NameNode :9000</strong><div class="svc-desc">文件写完后，Client 通知 NameNode 关闭文件，NameNode 提交元数据</div></div>
+                        </div>
+                    </div>
+
+                    <h2 style="margin-top:1.5rem;margin-bottom:.75rem">HDFS 读取流程</h2>
+                    <div class="flow" style="align-items:stretch">
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">1</div>
+                            <div><strong style="font-size:.8125rem">Client → NameNode :9000</strong><div class="svc-desc">请求读取文件，NameNode 返回文件的块列表，每个块对应的 DataNode 地址（按网络拓扑排序）</div></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">2</div>
+                            <div><strong style="font-size:.8125rem">Client → DataNode :9864</strong><div class="svc-desc">Client 选择最近的 DataNode（优先本地 > 同机架 > 其他机架），直接从 DN 读取数据块</div></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:40px 1fr;gap:.5rem;align-items:start">
+                            <div class="step-n" style="width:26px;height:26px;font-size:.6875rem">3</div>
+                            <div><strong style="font-size:.8125rem">失败重试</strong><div class="svc-desc">如果某个 DN 读取失败，Client 自动切换到该块的另一个副本所在的 DN 继续读取</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="section">
+        <div class="card">
+            <h2><span class="icon">&#9671;</span> 功能特性</h2>
+            <div class="g3">
+                <div class="feat"><span class="ck">&#10003;</span> 在线 / 离线双模式部署</div>
+                <div class="feat"><span class="ck">&#10003;</span> 自动生成 XML 配置文件</div>
+                <div class="feat"><span class="ck">&#10003;</span> SSH 远程分发到所有节点</div>
+                <div class="feat"><span class="ck">&#10003;</span> 自动格式化 NameNode</div>
+                <div class="feat"><span class="ck">&#10003;</span> 幂等设计，已安装跳过</div>
+                <div class="feat"><span class="ck">&#10003;</span> 服务状态检查后启动</div>
+                <div class="feat"><span class="ck">&#10003;</span> 部署后自动验证</div>
+                <div class="feat"><span class="ck">&#10003;</span> 试运行预览模式</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="section">
+        <h2 class="stitle">参数说明</h2>
+        <div class="tw">
+            <table>
+                <thead><tr><th>短参数</th><th>长参数</th><th>说明</th><th>默认值</th></tr></thead>
+                <tbody>
+                    <tr><td><code>-m</code></td><td><code>--mode</code></td><td>安装模式: <code>online</code> 或 <code>offline</code></td><td><code>online</code></td></tr>
+                    <tr><td></td><td><code>--skip-format</code></td><td>跳过 HDFS 格式化 (已有数据时使用)</td><td><code>false</code></td></tr>
+                    <tr><td><code>-d</code></td><td><code>--dry-run</code></td><td>试运行模式</td><td><code>false</code></td></tr>
+                    <tr><td><code>-v</code></td><td><code>--verbose</code></td><td>启用详细输出</td><td><code>false</code></td></tr>
+                    <tr><td><code>-h</code></td><td><code>--help</code></td><td>显示帮助信息</td><td>—</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="cb mt2">
+            <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+            <pre><span class="cm"># 在线部署</span>
+./02_deploy_hadoop.sh <span class="fl">-m</span> online
+
+<span class="cm"># 离线部署</span>
+./02_deploy_hadoop.sh <span class="fl">-m</span> offline
+
+<span class="cm"># 跳过格式化 (已有数据)</span>
+./02_deploy_hadoop.sh <span class="fl">--skip-format</span>
+
+<span class="cm"># 试运行</span>
+./02_deploy_hadoop.sh <span class="fl">-d</span></pre>
+        </div>
+    </div>
+
+    <!-- Workflow -->
+    <div class="section">
+        <h2 class="stitle">部署流程</h2>
+        <div class="flow">
+            <div class="fn">准备安装包 (下载 / 离线检查)</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">生成 6 个配置文件</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">遍历所有节点: 安装 + 分发配置 + 环境变量</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">格式化 HDFS NameNode</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">启动 HDFS &#8594; 启动 YARN &#8594; 启动 HistoryServer</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">验证: HDFS 状态 + YARN 节点</div>
+        </div>
+    </div>
+
+    <!-- Startup Scripts -->
+    <div class="section">
+        <h2 class="stitle">Hadoop 启动与管理脚本</h2>
+        <p class="sm muted mb2">Hadoop 提供了一套完整的脚本来管理集群服务的启停，位于 <code>$HADOOP_HOME/sbin/</code> 和 <code>$HADOOP_HOME/bin/</code> 目录下。</p>
+
+        <div class="tabs" id="script-tabs">
+            <div class="tl">
+                <button class="tb on" data-tab="scr-sbin">sbin/ 集群管理</button>
+                <button class="tb" data-tab="scr-bin">bin/ 命令工具</button>
+                <button class="tb" data-tab="scr-usage">使用场景</button>
+            </div>
+
+            <!-- sbin scripts -->
+            <div class="tc on" data-tab="scr-sbin">
+                <div class="card" style="border:none;margin:0;padding-top:0">
+                    <div class="tw">
+                        <table>
+                            <thead><tr><th>脚本</th><th>作用</th><th>启动的进程</th><th>执行位置</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>start-dfs.sh</code></td>
+                                    <td>启动整个 HDFS 集群</td>
+                                    <td>NameNode + SecondaryNameNode + 所有 DataNode</td>
+                                    <td>Master 节点执行，SSH 到各 Worker</td>
+                                </tr>
+                                <tr>
+                                    <td><code>stop-dfs.sh</code></td>
+                                    <td>停止整个 HDFS 集群</td>
+                                    <td>同上，全部关闭</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>start-yarn.sh</code></td>
+                                    <td>启动整个 YARN 集群</td>
+                                    <td>ResourceManager + 所有 NodeManager</td>
+                                    <td>Master 节点执行，SSH 到各 Worker</td>
+                                </tr>
+                                <tr>
+                                    <td><code>stop-yarn.sh</code></td>
+                                    <td>停止整个 YARN 集群</td>
+                                    <td>同上，全部关闭</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>start-all.sh</code></td>
+                                    <td>启动 HDFS + YARN（等同于依次执行上面两个）</td>
+                                    <td>全部守护进程</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>stop-all.sh</code></td>
+                                    <td>停止 HDFS + YARN</td>
+                                    <td>全部守护进程</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>hadoop-daemon.sh</code></td>
+                                    <td>在<strong>本机</strong>启动/停止单个守护进程</td>
+                                    <td>指定的单个进程</td>
+                                    <td>任意节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>hadoop-daemons.sh</code></td>
+                                    <td>在<strong>所有 Worker</strong> 上启动/停止守护进程</td>
+                                    <td>各 Worker 上的指定进程</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>yarn-daemon.sh</code></td>
+                                    <td>在<strong>本机</strong>启动/停止 YARN 守护进程</td>
+                                    <td>RM 或 NM 单个进程</td>
+                                    <td>任意节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>yarn-daemons.sh</code></td>
+                                    <td>在<strong>所有 Worker</strong> 上启动/停止 YARN 守护进程</td>
+                                    <td>各 Worker 上的 NM</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                                <tr>
+                                    <td><code>mr-jobhistory-daemon.sh</code></td>
+                                    <td>启动/停止 MapReduce JobHistory Server</td>
+                                    <td>JobHistoryServer</td>
+                                    <td>Master 节点执行</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- bin scripts -->
+            <div class="tc" data-tab="scr-bin">
+                <div class="card" style="border:none;margin:0;padding-top:0">
+                    <div class="tw">
+                        <table>
+                            <thead><tr><th>命令</th><th>子命令</th><th>作用</th><th>示例</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="3"><code>hdfs dfs</code></td>
+                                    <td><code>-ls</code></td>
+                                    <td>列出目录内容</td>
+                                    <td><code>hdfs dfs -ls /</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>-put</code></td>
+                                    <td>上传本地文件到 HDFS</td>
+                                    <td><code>hdfs dfs -put local.txt /data/</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>-get</code></td>
+                                    <td>从 HDFS 下载文件到本地</td>
+                                    <td><code>hdfs dfs -get /data/file.txt ./</code></td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="3"><code>hdfs dfsadmin</code></td>
+                                    <td><code>-report</code></td>
+                                    <td>查看集群状态报告</td>
+                                    <td><code>hdfs dfsadmin -report</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>-safemode</code></td>
+                                    <td>管理安全模式</td>
+                                    <td><code>hdfs dfsadmin -safemode leave</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>-refreshNodes</code></td>
+                                    <td>刷新节点列表（扩容/缩容后）</td>
+                                    <td><code>hdfs dfsadmin -refreshNodes</code></td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="2"><code>yarn</code></td>
+                                    <td><code>application -list</code></td>
+                                    <td>列出运行中的应用</td>
+                                    <td><code>yarn application -list</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>node -list</code></td>
+                                    <td>列出所有 NodeManager</td>
+                                    <td><code>yarn node -list</code></td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="2"><code>mapred</code></td>
+                                    <td><code>job -list</code></td>
+                                    <td>列出 MapReduce 作业</td>
+                                    <td><code>mapred job -list</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>--daemon start historyserver</code></td>
+                                    <td>启动 JobHistory Server</td>
+                                    <td><code>mapred --daemon start historyserver</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage scenarios -->
+            <div class="tc" data-tab="scr-usage">
+                <div class="card" style="border:none;margin:0;padding-top:0">
+                    <h2 style="margin-bottom:.75rem">常见操作场景</h2>
+
+                    <div class="cfg-card">
+                        <div class="cfg-head">
+                            <h3>首次启动集群</h3>
+                            <span class="badge">完整流程</span>
+                        </div>
+                        <div class="cfg-body">
+                            <pre><span class="cm"># 1. 格式化 NameNode（仅首次）</span>
+hdfs namenode -format -force -nonInteractive
+
+<span class="cm"># 2. 启动 HDFS</span>
+start-dfs.sh
+
+<span class="cm"># 3. 启动 YARN</span>
+start-yarn.sh
+
+<span class="cm"># 4. 启动 JobHistory Server</span>
+mapred --daemon start historyserver
+
+<span class="cm"># 5. 验证</span>
+jps                              <span class="cm"># 查看 Java 进程</span>
+hdfs dfsadmin -report            <span class="cm"># 查看 HDFS 状态</span>
+yarn node -list                  <span class="cm"># 查看 YARN 节点</span></pre>
+                        </div>
+                    </div>
+
+                    <div class="cfg-card">
+                        <div class="cfg-head">
+                            <h3>日常重启集群</h3>
+                            <span class="badge">标准流程</span>
+                        </div>
+                        <div class="cfg-body">
+                            <pre><span class="cm"># 停止（先停 YARN 再停 HDFS，顺序很重要）</span>
+stop-yarn.sh
+stop-dfs.sh
+
+<span class="cm"># 启动（先启 HDFS 再启 YARN）</span>
+start-dfs.sh
+start-yarn.sh
+mapred --daemon start historyserver</pre>
+                        </div>
+                    </div>
+
+                    <div class="cfg-card">
+                        <div class="cfg-head">
+                            <h3>重启单个服务</h3>
+                            <span class="badge">精准操作</span>
+                        </div>
+                        <div class="cfg-body">
+                            <pre><span class="cm"># 在 node1 上重启 NameNode</span>
+hdfs --daemon stop namenode
+hdfs --daemon start namenode
+
+<span class="cm"># 在 node2 上重启 DataNode</span>
+hdfs --daemon stop datanode
+hdfs --daemon start datanode
+
+<span class="cm"># 在 node1 上重启 ResourceManager</span>
+yarn --daemon stop resourcemanager
+yarn --daemon start resourcemanager
+
+<span class="cm"># 在 node2 上重启 NodeManager</span>
+yarn --daemon stop nodemanager
+yarn --daemon start nodemanager</pre>
+                        </div>
+                    </div>
+
+                    <div class="callout warn" style="margin-bottom:0">
+                        <span class="ci">&#9888;</span>
+                        <div>
+                            <strong>启动顺序很重要：</strong><br>
+                            &#8226; <strong>启动</strong>：先 HDFS → 再 YARN → 最后 JobHistory<br>
+                            &#8226; <strong>停止</strong>：先 YARN → 再 HDFS → 最后 JobHistory<br>
+                            原因：YARN 依赖 HDFS 存储，必须在 HDFS 就绪后才能启动。停止时反过来，先停上层应用再停底层存储。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Files -->
+    <div class="section">
+        <h2 class="stitle">配置文件详解</h2>
+        <p class="sm muted mb2">脚本自动生成以下 6 个配置文件并分发到所有节点的 <code>$HADOOP_HOME/etc/hadoop/</code> 目录。</p>
+
+        <div class="tabs" id="cfg-tabs">
+            <div class="tl">
+                <button class="tb on" data-tab="cfg-core">core-site.xml</button>
+                <button class="tb" data-tab="cfg-hdfs">hdfs-site.xml</button>
+                <button class="tb" data-tab="cfg-yarn">yarn-site.xml</button>
+                <button class="tb" data-tab="cfg-mapred">mapred-site.xml</button>
+                <button class="tb" data-tab="cfg-env">hadoop-env.sh</button>
+                <button class="tb" data-tab="cfg-workers">workers</button>
+            </div>
+
+            <!-- core-site.xml -->
+            <div class="tc on" data-tab="cfg-core">
+                <div class="cfg-card">
+                    <div class="cfg-head">
+                        <h3>core-site.xml</h3>
+                        <span class="badge">Hadoop 核心配置</span>
+                    </div>
+                    <div class="cfg-body">
+                        <pre><span class="tag-c">&lt;configuration&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">fs.defaultFS</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">hdfs://node1:9000</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">hadoop.tmp.dir</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">/data/bigdata/tmp</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">io.file.buffer.size</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">131072</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+<span class="tag-c">&lt;/configuration&gt;</span></pre>
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <div class="prop"><div class="pk">fs.defaultFS</div><div class="pv"><strong>默认文件系统 URI</strong><br>指定 HDFS 的 NameNode 地址，所有客户端通过此地址访问 HDFS。格式: <code>hdfs://主机名:RPC端口</code></div></div>
+                    <div class="prop"><div class="pk">hadoop.tmp.dir</div><div class="pv"><strong>Hadoop 临时目录</strong><br>NameNode、DataNode 等进程的临时数据存放位置。需确保目录存在且 Hadoop 用户有读写权限。</div></div>
+                    <div class="prop"><div class="pk">io.file.buffer.size</div><div class="pv"><strong>IO 缓冲区大小 (字节)</strong><br>读写文件时的缓冲区大小，默认 4096，设为 128KB (131072) 可显著提升大文件读写性能。</div></div>
+                </div>
+            </div>
+
+            <!-- hdfs-site.xml -->
+            <div class="tc" data-tab="cfg-hdfs">
+                <div class="cfg-card">
+                    <div class="cfg-head">
+                        <h3>hdfs-site.xml</h3>
+                        <span class="badge">HDFS 分布式文件系统配置</span>
+                    </div>
+                    <div class="cfg-body">
+                        <pre><span class="tag-c">&lt;configuration&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">dfs.replication</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">2</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">dfs.namenode.name.dir</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">file:///data/bigdata/hdfs/name</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">dfs.datanode.data.dir</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">file:///data/bigdata/hdfs/data</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">dfs.namenode.http-address</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">node1:9870</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">dfs.namenode.secondary.http-address</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">node3:9868</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">dfs.permissions</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">false</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+<span class="tag-c">&lt;/configuration&gt;</span></pre>
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <div class="prop"><div class="pk">dfs.replication</div><div class="pv"><strong>HDFS 副本数</strong><br>每个数据块的副本数量。3 节点集群建议设为 2，5 节点以上可设为 3。副本数不能超过 DataNode 数量。</div></div>
+                    <div class="prop"><div class="pk">dfs.namenode.name.dir</div><div class="pv"><strong>NameNode 元数据目录</strong><br>存放 HDFS 文件系统元数据（文件目录树、块映射等）。<strong>此目录数据极其重要</strong>，丢失将导致整个 HDFS 不可用。建议配置多个目录做冗余。</div></div>
+                    <div class="prop"><div class="pk">dfs.datanode.data.dir</div><div class="pv"><strong>DataNode 数据目录</strong><br>存放实际的数据块文件。可配置多个逗号分隔的目录，实现跨磁盘存储以提升 IO 性能。</div></div>
+                    <div class="prop"><div class="pk">dfs.namenode.http-address</div><div class="pv"><strong>NameNode Web UI 地址</strong><br>HDFS 管理界面的 HTTP 地址，可通过浏览器访问查看集群状态、浏览文件系统。</div></div>
+                    <div class="prop"><div class="pk">dfs.namenode.secondary.http-address</div><div class="pv"><strong>SecondaryNameNode 地址</strong><br>SecondaryNameNode 定期合并 NameNode 的编辑日志和镜像文件，减轻 NameNode 启动时的合并负担。应部署在与 NameNode 不同的节点上。</div></div>
+                    <div class="prop"><div class="pk">dfs.permissions</div><div class="pv"><strong>HDFS 权限检查</strong><br>设为 false 禁用文件权限检查，方便开发测试。生产环境建议设为 true 并配置正确的用户权限。</div></div>
+                </div>
+            </div>
+
+            <!-- yarn-site.xml -->
+            <div class="tc" data-tab="cfg-yarn">
+                <div class="cfg-card">
+                    <div class="cfg-head">
+                        <h3>yarn-site.xml</h3>
+                        <span class="badge">YARN 资源管理器配置</span>
+                    </div>
+                    <div class="cfg-body">
+                        <pre><span class="tag-c">&lt;configuration&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">yarn.resourcemanager.hostname</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">node1</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">yarn.resourcemanager.webapp.address</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">node1:8088</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">yarn.nodemanager.resource.memory-mb</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">8192</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">yarn.nodemanager.resource.cpu-vcores</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">4</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="cm">...</span> <span class="cm">(更多配置见下方)</span></pre>
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <div class="prop"><div class="pk">yarn.resourcemanager.hostname</div><div class="pv"><strong>ResourceManager 主机名</strong><br>YARN 的中央资源调度器所在节点，负责管理所有 NodeManager 的资源分配。</div></div>
+                    <div class="prop"><div class="pk">yarn.nodemanager.resource.memory-mb</div><div class="pv"><strong>NodeManager 可分配内存 (MB)</strong><br>每个 Worker 节点上可供 YARN 容器使用的总内存。<strong>应小于节点实际可用内存</strong>，预留部分给操作系统和其他进程。</div></div>
+                    <div class="prop"><div class="pk">yarn.nodemanager.resource.cpu-vcores</div><div class="pv"><strong>NodeManager 可分配 CPU 核数</strong><br>每个 Worker 节点上可供 YARN 容器使用的总 CPU 核心数。</div></div>
+                    <div class="prop"><div class="pk">yarn.scheduler.minimum-allocation-mb</div><div class="pv"><strong>单容器最小内存</strong><br>YARN 分配给每个容器的最小内存，低于此值不会分配。</div></div>
+                    <div class="prop"><div class="pk">yarn.scheduler.maximum-allocation-mb</div><div class="pv"><strong>单容器最大内存</strong><br>单个容器可申请的最大内存，不能超过 NodeManager 总内存。</div></div>
+                    <div class="prop"><div class="pk">yarn.nodemanager.aux-services</div><div class="pv"><strong>辅助服务</strong><br>设为 <code>mapreduce_shuffle</code>，让 NodeManager 支持 MapReduce 的 Shuffle 操作（中间数据排序和传输）。</div></div>
+                    <div class="prop"><div class="pk">yarn.log-aggregation-enable</div><div class="pv"><strong>日志聚合</strong><br>启用后，应用完成后日志会从各 NodeManager 聚合到 HDFS，方便统一查看。</div></div>
+                    <div class="prop"><div class="pk">yarn.nodemanager.env-whitelist</div><div class="pv"><strong>环境变量白名单</strong><br>容器中可继承的环境变量列表，确保 JAVA_HOME 等关键变量传递到 YARN 容器中。</div></div>
+                </div>
+            </div>
+
+            <!-- mapred-site.xml -->
+            <div class="tc" data-tab="cfg-mapred">
+                <div class="cfg-card">
+                    <div class="cfg-head">
+                        <h3>mapred-site.xml</h3>
+                        <span class="badge">MapReduce 配置</span>
+                    </div>
+                    <div class="cfg-body">
+                        <pre><span class="tag-c">&lt;configuration&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">mapreduce.framework.name</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">yarn</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">mapreduce.jobhistory.address</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">node1:10020</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">mapreduce.jobhistory.webapp.address</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">node1:19888</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+    <span class="tag-c">&lt;property&gt;</span>
+        <span class="tag-c">&lt;name&gt;</span><span class="k">yarn.app.mapreduce.am.env</span><span class="tag-c">&lt;/name&gt;</span>
+        <span class="tag-c">&lt;value&gt;</span><span class="v">HADOOP_MAPRED_HOME=${HADOOP_HOME}</span><span class="tag-c">&lt;/value&gt;</span>
+    <span class="tag-c">&lt;/property&gt;</span>
+<span class="tag-c">&lt;/configuration&gt;</span></pre>
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <div class="prop"><div class="pk">mapreduce.framework.name</div><div class="pv"><strong>MapReduce 运行框架</strong><br>设为 <code>yarn</code> 表示 MapReduce 任务运行在 YARN 上，由 YARN 负责资源分配。也可设为 <code>local</code> 用于本地调试。</div></div>
+                    <div class="prop"><div class="pk">mapreduce.jobhistory.address</div><div class="pv"><strong>JobHistory Server RPC 地址</strong><br>MapReduce 任务历史记录服务的 RPC 端口，客户端通过此地址获取已完成任务的信息。</div></div>
+                    <div class="prop"><div class="pk">mapreduce.jobhistory.webapp.address</div><div class="pv"><strong>JobHistory Server Web 地址</strong><br>通过浏览器访问此地址查看 MapReduce 任务的历史执行详情、计数器、日志等。</div></div>
+                    <div class="prop"><div class="pk">yarn.app.mapreduce.am.env</div><div class="pv"><strong>ApplicationMaster 环境变量</strong><br>设置 MapReduce ApplicationMaster 的 HADOOP_MAPRED_HOME 环境变量，确保能找到依赖的 JAR 包。map.env 和 reduce.env 同理。</div></div>
+                </div>
+            </div>
+
+            <!-- hadoop-env.sh -->
+            <div class="tc" data-tab="cfg-env">
+                <div class="cfg-card">
+                    <div class="cfg-head">
+                        <h3>hadoop-env.sh</h3>
+                        <span class="badge">环境变量配置</span>
+                    </div>
+                    <div class="cfg-body">
+                        <pre><span class="kw">export</span> <span class="k">JAVA_HOME</span>=<span class="v">/opt/bigdata/jdk</span>
+<span class="kw">export</span> <span class="k">HADOOP_HOME</span>=<span class="v">/opt/bigdata/hadoop</span>
+<span class="kw">export</span> <span class="k">HADOOP_CONF_DIR</span>=<span class="v">${HADOOP_HOME}/etc/hadoop</span>
+<span class="kw">export</span> <span class="k">HADOOP_LOG_DIR</span>=<span class="v">/var/log/bigdata/hadoop</span>
+
+<span class="cm"># 进程运行用户</span>
+<span class="kw">export</span> <span class="k">HDFS_NAMENODE_USER</span>=<span class="v">hadoop</span>
+<span class="kw">export</span> <span class="k">HDFS_DATANODE_USER</span>=<span class="v">hadoop</span>
+<span class="kw">export</span> <span class="k">HDFS_SECONDARYNAMENODE_USER</span>=<span class="v">hadoop</span>
+<span class="kw">export</span> <span class="k">YARN_RESOURCEMANAGER_USER</span>=<span class="v">hadoop</span>
+<span class="kw">export</span> <span class="k">YARN_NODEMANAGER_USER</span>=<span class="v">hadoop</span>
+
+<span class="cm"># JVM 参数</span>
+<span class="kw">export</span> <span class="k">HADOOP_NAMENODE_OPTS</span>=<span class="st">"-Xmx2g -Xms2g"</span>
+<span class="kw">export</span> <span class="k">HADOOP_DATANODE_OPTS</span>=<span class="st">"-Xmx1g -Xms1g"</span>
+<span class="kw">export</span> <span class="k">HADOOP_RESOURCEMANAGER_OPTS</span>=<span class="st">"-Xmx2g -Xms2g"</span>
+<span class="kw">export</span> <span class="k">HADOOP_NODEMANAGER_OPTS</span>=<span class="st">"-Xmx1g -Xms1g"</span></pre>
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <div class="prop"><div class="pk">JAVA_HOME</div><div class="pv"><strong>JDK 安装目录</strong><br>Hadoop 必须运行在 JDK 环境上，此处指定 JDK 的根目录。</div></div>
+                    <div class="prop"><div class="pk">HADOOP_LOG_DIR</div><div class="pv"><strong>日志目录</strong><br>所有 Hadoop 进程的日志输出目录，包括 NameNode、DataNode、ResourceManager、NodeManager 的运行日志。</div></div>
+                    <div class="prop"><div class="pk">HDFS_*_USER / YARN_*_USER</div><div class="pv"><strong>进程运行用户</strong><br>指定各守护进程以哪个用户身份运行。生产环境不建议用 root，应使用专用用户如 hadoop。</div></div>
+                    <div class="prop"><div class="pk">HADOOP_NAMENODE_OPTS</div><div class="pv"><strong>NameNode JVM 参数</strong><br>NameNode 管理整个 HDFS 的元数据，内存需求最大。元数据量大时需要增加 <code>-Xmx</code> 值。</div></div>
+                    <div class="prop"><div class="pk">HADOOP_DATANODE_OPTS</div><div class="pv"><strong>DataNode JVM 参数</strong><br>DataNode 主要负责数据块存储，内存需求相对较小。</div></div>
+                </div>
+            </div>
+
+            <!-- workers -->
+            <div class="tc" data-tab="cfg-workers">
+                <div class="cfg-card">
+                    <div class="cfg-head">
+                        <h3>workers</h3>
+                        <span class="badge">Worker 节点列表</span>
+                    </div>
+                    <div class="cfg-body">
+                        <pre><span class="cm"># Worker 节点主机名，每行一个</span>
+<span class="cm"># start-dfs.sh 和 start-yarn.sh 会在此列表中的节点上</span>
+<span class="cm"># 分别启动 DataNode 和 NodeManager 进程</span>
+<span class="cm"># Master 节点也应列入（同时运行 DataNode + NodeManager）</span>
+
+<span class="v">node1</span>
+<span class="v">node2</span>
+<span class="v">node3</span></pre>
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <div class="prop"><div class="pk">workers 文件</div><div class="pv"><strong>Worker 节点列表</strong><br>每行一个主机名，<code>start-dfs.sh</code> 会在这些节点上启动 DataNode，<code>start-yarn.sh</code> 会在这些节点上启动 NodeManager。主机名必须能通过 DNS 或 /etc/hosts 解析。</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Directory Structure -->
+    <div class="section">
+        <h2 class="stitle">目录结构</h2>
+        <div class="g2">
+            <div class="card">
+                <h2>数据目录</h2>
+                <div class="scfg">
+<span class="k">/data/bigdata/</span>
+├── <span class="v">hdfs/name/</span>     <span class="cm">NameNode 元数据</span>
+├── <span class="v">hdfs/data/</span>     <span class="cm">DataNode 数据块</span>
+├── <span class="v">tmp/</span>           <span class="cm">Hadoop 临时文件</span>
+└── <span class="v">yarn/logs/</span>    <span class="cm">YARN 日志聚合</span>
+                </div>
+            </div>
+            <div class="card">
+                <h2>安装与日志</h2>
+                <div class="scfg">
+<span class="k">/opt/bigdata/hadoop/</span>  <span class="cm">Hadoop 安装目录</span>
+└── <span class="v">etc/hadoop/</span>       <span class="cm">配置文件目录</span>
+
+<span class="k">/var/log/bigdata/hadoop/</span> <span class="cm">运行日志</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification -->
+    <div class="section">
+        <h2 class="stitle">部署验证</h2>
+        <p class="sm muted mb1">脚本部署完成后会自动执行验证，也可手动检查：</p>
+        <div class="cb">
+            <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+            <pre><span class="cm"># 检查 HDFS 状态</span>
+hdfs dfsadmin -report
+
+<span class="cm"># 检查 YARN 节点</span>
+yarn node -list
+
+<span class="cm"># 测试 HDFS 读写</span>
+hdfs dfs -put localfile /test/
+hdfs dfs -cat /test/localfile
+hdfs dfs -rm /test/localfile
+
+<span class="cm"># 访问 Web UI</span>
+<span class="cm"># HDFS: http://node1:9870</span>
+<span class="cm"># YARN: http://node1:8088</span></pre>
+        </div>
+    </div>
+
+    <!-- Idempotency -->
+    <div class="section">
+        <h2 class="stitle">幂等性设计</h2>
+        <div class="tw">
+            <table>
+                <thead><tr><th>检查项</th><th>检查方式</th><th>重复运行行为</th></tr></thead>
+                <tbody>
+                    <tr><td>Hadoop 已安装</td><td><code>hadoop version</code></td><td>跳过解压</td></tr>
+                    <tr><td>HDFS 已格式化</td><td><code>name/current</code> 目录 + 进程检查</td><td>跳过格式化</td></tr>
+                    <tr><td>HDFS 已运行</td><td><code>hdfs dfsadmin -report</code></td><td>跳过启动</td></tr>
+                    <tr><td>YARN 已运行</td><td><code>yarn node -list</code></td><td>跳过启动</td></tr>
+                    <tr><td>HistoryServer 已运行</td><td><code>jps</code> 进程检查</td><td>跳过启动</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="callout warn mt1">
+            <span class="ci">&#9888;</span>
+            <div>
+                <strong>配置文件每次运行会重新生成</strong> — 手动修改的配置会丢失。如需自定义配置，建议修改脚本中的模板而非手动改文件。
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        内部使用 · Hadoop HDFS + YARN 集群部署脚本
+    </div>
+
+</div>
+
+<script>
+    document.querySelectorAll('.tabs').forEach(g=>{
+        const btns=g.querySelectorAll('.tb'),tcs=g.querySelectorAll('.tc');
+        btns.forEach(b=>{b.addEventListener('click',()=>{const t=b.dataset.tab;btns.forEach(x=>x.classList.remove('on'));tcs.forEach(x=>x.classList.remove('on'));b.classList.add('on');g.querySelector(`.tc[data-tab="${t}"]`).classList.add('on')})})
+    });
+    function cp(btn){const pre=btn.closest('.cb').querySelector('pre');navigator.clipboard.writeText(pre.textContent).then(()=>{const o=btn.textContent;btn.textContent='Copied';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent=o;btn.style.color=''},1500)})}
+</script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka 集群部署脚本</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg:#09090b;--fg:#fafafa;--card:#0a0a0a;--primary:#fafafa;--primary-fg:#18181b;
+            --secondary:#1c1c1f;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;
+            --ring:#d4d4d8;--radius:.5rem;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;
+            --blue:#3b82f6;--cyan:#06b6d4;--violet:#8b5cf6;--orange:#f97316;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7;-webkit-font-smoothing:antialiased}
+        .container{max-width:960px;margin:0 auto;padding:0 1.5rem}
+
+        .header{padding:3.5rem 0 2.5rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem}
+        .header .tags{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+        .tag{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .65rem;font-size:.6875rem;font-weight:500;border:1px solid var(--border);border-radius:9999px;color:var(--muted-fg);background:var(--secondary)}
+        .tag .dot{width:5px;height:5px;border-radius:50%}
+        .tag.green .dot{background:var(--green)}.tag.blue .dot{background:var(--blue)}.tag.orange .dot{background:var(--orange)}.tag.violet .dot{background:var(--violet)}
+        .header h1{font-size:2.25rem;font-weight:700;letter-spacing:-.025em;line-height:1.2;margin-bottom:.75rem}
+        .header p{color:var(--muted-fg);font-size:1rem;max-width:640px}
+
+        .card{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);padding:1.5rem;margin-bottom:1.5rem}
+        .card h2{font-size:1.125rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+        .card h2 .icon{color:var(--muted-fg);font-size:.9rem}
+        .card .desc{color:var(--muted-fg);font-size:.8125rem;margin-bottom:1rem}
+
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+        .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+        @media(max-width:768px){.g2,.g3{grid-template-columns:1fr}}
+
+        .feat{display:flex;align-items:flex-start;gap:.5rem;padding:.625rem .75rem;border-radius:calc(var(--radius) - 2px);background:var(--secondary);font-size:.8125rem;line-height:1.5}
+        .feat .ck{color:var(--green);flex-shrink:0;margin-top:1px}
+
+        .cb{position:relative;background:#18181b;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);margin:.625rem 0;overflow:hidden}
+        .cb .cb-h{display:flex;align-items:center;justify-content:space-between;padding:.4rem .875rem;background:#1e1e22;border-bottom:1px solid var(--border);font-size:.6875rem;color:var(--muted-fg)}
+        .cb .cb-h .lang{font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+        .cb .cp{background:none;border:1px solid var(--border);color:var(--muted-fg);padding:.15rem .45rem;border-radius:4px;cursor:pointer;font-size:.625rem;font-family:'Noto Sans SC',sans-serif;transition:all .15s}
+        .cb .cp:hover{color:var(--fg);border-color:var(--ring)}
+        .cb pre{padding:.875rem;overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:.75rem;line-height:1.7;color:#d4d4d8}
+
+        .tw{overflow-x:auto;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px)}
+        table{width:100%;border-collapse:collapse;font-size:.8125rem}
+        thead{background:#1e1e22}
+        th{text-align:left;padding:.5rem 1rem;font-weight:500;color:var(--muted-fg);border-bottom:1px solid var(--border);white-space:nowrap}
+        td{padding:.5rem 1rem;border-bottom:1px solid var(--border)}
+        tr:last-child td{border-bottom:none}
+        tr:hover{background:rgba(39,39,42,.4)}
+        td code{font-family:'IBM Plex Mono',monospace;font-size:.6875rem;background:#27272a;padding:.12rem .35rem;border-radius:3px;color:#e879f9}
+        .req{color:var(--red);font-weight:500}
+
+        .tabs{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:.625rem 0}
+        .tl{display:flex;background:#1e1e22;border-bottom:1px solid var(--border);overflow-x:auto}
+        .tb{padding:.5rem 1.125rem;font-size:.8125rem;font-weight:500;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted-fg);cursor:pointer;transition:all .15s;font-family:'Noto Sans SC',sans-serif;white-space:nowrap}
+        .tb:hover{color:var(--fg)}.tb.on{color:var(--fg);border-bottom-color:var(--fg)}
+        .tc{display:none}.tc.on{display:block}
+
+        .step{display:flex;gap:1rem}
+        .step-line{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+        .step-n{width:26px;height:26px;border-radius:50%;background:var(--secondary);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.6875rem;font-weight:600;z-index:1}
+        .step-c{width:1px;flex:1;background:var(--border);min-height:1rem}
+        .step-b{padding-bottom:1.25rem}
+        .step-b h3{font-size:.875rem;font-weight:600;margin-bottom:.25rem}
+        .step-b p{color:var(--muted-fg);font-size:.8125rem}
+
+        .callout{display:flex;gap:.625rem;padding:.875rem;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);font-size:.8125rem;margin:.625rem 0}
+        .callout.warn{border-color:#854d0e;background:rgba(245,158,11,.06)}.callout.warn .ci{color:var(--amber)}
+        .callout.danger{border-color:#991b1b;background:rgba(239,68,68,.06)}.callout.danger .ci{color:var(--red)}
+        .callout.info{border-color:#1e40af;background:rgba(59,130,246,.06)}.callout.info .ci{color:var(--blue)}
+        .ci{flex-shrink:0;font-size:.95rem;line-height:1.5}
+
+        .section{margin-bottom:2.5rem}
+        .stitle{font-size:1.375rem;font-weight:700;letter-spacing:-.02em;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+
+        .flow{display:flex;flex-direction:column;align-items:center;gap:.15rem;padding:1.25rem;background:#18181b;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px)}
+        .fn{padding:.4rem 1rem;background:var(--secondary);border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);font-size:.75rem;font-weight:500;text-align:center;min-width:200px}
+        .fn.pri{background:rgba(250,250,250,.07);border-color:var(--ring)}
+        .fa{color:var(--muted-fg);font-size:.8rem;line-height:1}
+
+        .scfg{background:#18181b;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);padding:1rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:.75rem;line-height:1.8;color:#d4d4d8;margin:.5rem 0}
+        .scfg .k{color:#67e8f9}.scfg .v{color:#86efac}.scfg .p{color:#c084fc}
+
+        .muted{color:var(--muted-fg)}.sm{font-size:.8125rem}.mb1{margin-bottom:.5rem}.mb2{margin-bottom:1rem}.mt1{margin-top:.5rem}.mt2{margin-top:1rem}
+        .footer{padding:2rem 0;border-top:1px solid var(--border);text-align:center;color:var(--muted-fg);font-size:.6875rem}
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="tags">
+            <span class="tag green"><span class="dot"></span>Kafka 3.x</span>
+            <span class="tag blue"><span class="dot"></span>集群部署</span>
+            <span class="tag orange"><span class="dot"></span>自动化脚本</span>
+        </div>
+        <h1>03_deploy_kafka.sh</h1>
+        <p>自动化部署 Kafka 集群（包含 ZooKeeper），支持在线下载和离线安装两种模式，自动完成配置生成、分发、启动和验证。</p>
+    </div>
+
+    <!-- Overview -->
+    <div class="section">
+        <h2 class="stitle">脚本功能概述</h2>
+        <div class="card">
+            <h2><span class="icon">&#9671;</span> 核心功能</h2>
+            <div class="g3">
+                <div class="feat"><span class="ck">&#10003;</span> 在线 / 离线双模式部署</div>
+                <div class="feat"><span class="ck">&#10003;</span> 自动生成 ZooKeeper 和 Kafka 配置</div>
+                <div class="feat"><span class="ck">&#10003;</span> SSH 远程分发到所有节点</div>
+                <div class="feat"><span class="ck">&#10003;</span> 服务状态检查后启动</div>
+                <div class="feat"><span class="ck">&#10003;</span> 部署后自动验证连通性</div>
+                <div class="feat"><span class="ck">&#10003;</span> 试运行预览模式</div>
+                <div class="feat"><span class="ck">&#10003;</span> 详细日志和错误处理</div>
+                <div class="feat"><span class="ck">&#10003;</span> 资源自动清理机制</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Usage -->
+    <div class="section">
+        <h2 class="stitle">使用方法</h2>
+        <div class="cb mt2">
+            <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+            <pre><span class="cm"># 在线部署（默认）</span>
+./03_deploy_kafka.sh
+
+<span class="cm"># 离线部署</span>
+./03_deploy_kafka.sh -m offline
+
+<span class="cm"># 试运行查看执行计划</span>
+./03_deploy_kafka.sh -d
+
+<span class="cm"># 启用详细输出调试</span>
+./03_deploy_kafka.sh -v
+</pre>
+        </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="section">
+        <h2 class="stitle">参数说明</h2>
+        <div class="tw">
+            <table>
+                <thead><tr><th>短参数</th><th>长参数</th><th>说明</th><th>默认值</th></tr></thead>
+                <tbody>
+                    <tr><td><code>-m</code></td><td><code>--mode</code></td><td>安装模式: <code>online</code> 或 <code>offline</code></td><td><code>online</code></td></tr>
+                    <tr><td><code>-d</code></td><td><code>--dry-run</code></td><td>试运行模式（仅显示将要执行的操作）</td><td><code>false</code></td></tr>
+                    <tr><td><code>-v</code></td><td><code>--verbose</code></td><td>启用详细输出</td><td><code>false</code></td></tr>
+                    <tr><td><code>-h</code></td><td><code>--help</code></td><td>显示帮助信息</td><td>—</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Important Notes -->
+    <div class="section">
+        <h2 class="stitle">重要注意事项</h2>
+        <div class="callout warn">
+            <span class="ci">&#9432;</span>
+            <div>
+                <strong>离线模式注意：</strong>在离线模式下，请确保将 ZooKeeper 和 Kafka 的安装包放置在 <code>${OFFLINE_DIR}/</code> 目录中，文件名需与脚本中定义的 <code>ZOOKEEPER_PACKAGE</code> 和 <code>KAFKA_PACKAGE</code> 变量匹配。
+            </div>
+        </div>
+        <div class="callout info mt1">
+            <span class="ci">&#9432;</span>
+            <div>
+                <strong>前置条件：</strong>请确保目标机器已配置好 SSH 免密登录，并且有 <code>root</code> 或具有 sudo 权限的用户可用。脚本会自动在目标机器上创建必要的目录和用户组。
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow -->
+    <div class="section">
+        <h2 class="stitle">部署流程</h2>
+        <div class="flow">
+            <div class="fn">解析参数和环境变量</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">准备安装包（下载/离线验证）</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">生成 ZooKeeper 配置文件</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">在所有 ZooKeeper 节点上安装和配置</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">启动 ZooKeeper 集群并验证状态</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">生成 Kafka 配置文件</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">在所有 Kafka Broker 节点上安装和配置</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn pri">设置 Kafka 环境变量</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">启动 Kafka 集群</div>
+            <div class="fa">&#8595;</div>
+            <div class="fn">验证 Kafka 集群连通性</div>
+        </div>
+    </div>
+
+    <!-- Architecture -->
+    <div class="section">
+        <h2 class="stitle">集群架构说明</h2>
+        <p class="sm muted mb2">脚本支持灵活的集群拓扑，通过环境变量配置 ZooKeeper 节点和 Kafka Broker 节点列表。</p>
+        
+        <div class="tw mt2">
+            <table>
+                <thead><tr><th>组件</th><th>作用</th><th>端口</th><th>备注</th></tr></thead>
+                <tbody>
+                    <tr><td><code>ZooKeeper</code></td><td>分布式协调服务</td><td>2181</td><td>保存 Kafka 集群元数据，选举控制器</td></tr>
+                    <tr><td><code>Kafka Broker</code></td><td>消息代理节点</td><td>9092</td><td>处理生产和消费请求，存储消息</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="callout info mt1">
+            <span class="ci">&#9432;</span>
+            <div>
+                脚本会根据 <code>ZK_HOSTS</code> 和 <code>KAFKA_BROKERS</code> 环境变量自动分配 ZooKeeper 的 myid 和 Kafka 的 broker.id，无需手动配置。
+            </div>
+        </div>
+    </div>
+
+    <!-- Port and Firewall Configuration -->
+    <div class="section">
+        <h2 class="stitle">端口说明和防火墙配置</h2>
+        <p class="sm muted mb2">在云服务器或防火墙环境中，需要开放以下端口以确保 Kafka 集群正常通信：</p>
+        
+        <div class="tw mt2">
+            <table>
+                <thead><tr><th>服务</th><th>端口</th><th>协议</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td><code>ZooKeeper 客户端</code></td><td>2181</td><td>TCP</td><td>Kafka Broker 和客户端连接 ZooKeeper 的端口</td></tr>
+                    <tr><td><code>ZooKeeper 节点间通信</code></td><td>2888</td><td>TCP</td><td>ZooKeeper 集群内部节点通信端口（Follower → Leader）</td></tr>
+                    <tr><td><code>ZooKeeper 选举通信</code></td><td>3888</td><td>TCP</td><td>ZooKeeper 集群选举过程中的通信端口</td></tr>
+                    <tr><td><code>Kafka Broker</code></td><td>9092</td><td>TCP</td><td>生产者和消费者连接 Kafka 的端口</td></tr>
+                    <tr><td><code>SSH</code></td><td>22</td><td>TCP</td><td>脚本执行所需的远程登录端口（如需修改请参考下文）</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="callout warn mt1">
+            <span class="ci">&#9432;</span>
+            <div>
+                <strong>重要提示：</strong>实际使用的端口可能受 <code>env.sh</code> 文件中的配置影响。如果在部署过程中发现端口被占用，请参考以下步骤修改端口配置：
+            </div>
+        </div>
+        
+        <div class="cb mt2">
+            <div class="cb-h"><span class="lang">bash</span><button class="cp" onclick="cp(this)">Copy</button></div>
+            <pre><span class="cm"># 1. 编辑环境配置文件</span>
+vim env.sh
+
+<span class="cm"># 2. 找到端口配置部分（大约在第 132-145 行）：</span>
+<span class="cm"># ==================== 端口配置 ====================</span>
+# Hadoop
+HDFS_NAMENODE_PORT=9870
+HDFS_NAMENODE_RPC_PORT=9000
+YARN_RESOURCEMANAGER_PORT=8088
+YARN_RESOURCEMANAGER_SCHEDULER_PORT=8030
+YARN_NODEMANAGER_PORT=8042
+
+# Kafka
+KAFKA_PORT=9092  ← 修改此值
+
+# Zookeeper
+ZK_CLIENT_PORT=2181  ← 修改此值
+ZK_PEER_PORT=2888    ← 修改此值
+ZK_ELECTION_PORT=3888← 修改此值
+
+<span class="cm"># 3. 修改为未被占用的端口（例如）：</span>
+# Kafka
+KAFKA_PORT=9093
+
+# Zookeeper
+ZK_CLIENT_PORT=2182
+ZK_PEER_PORT=2889
+ZK_ELECTION_PORT=3889
+
+<span class="cm"># 4. 保存文件并重新执行部署脚本</span>
+./03_deploy_kafka.sh
+</pre>
+        </div>
+        
+        <div class="callout info mt1">
+            <span class="ci">&#9432;</span>
+            <div>
+                <strong>端口选择建议：</strong>选择 1024-65535 范围内的端口，避免与系统服务和其他常见应用冲突。修改后请确保防火墙/安全组规则也相应更新以放行新端口。
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>© 2026 大数据组件部署工具集 | 03_deploy_kafka.sh</p>
+        <p>采用工业级脚本开发标准，确保生产环境可靠部署</p>
+    </div>
+
+</div>
+</body>
+</html>

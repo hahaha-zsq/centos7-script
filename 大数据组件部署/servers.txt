@@ -1,0 +1,11 @@
+# 集群服务器列表
+# 格式: ip 主机名
+# 第一行为主节点 (Master)，其余为工作节点 (Worker)
+# 部署时会自动配置所有节点的 /etc/hosts
+
+# 主节点 (NameNode, ResourceManager, Flink JobManager, Spark HistoryServer)
+154.217.249.230 node1
+
+# 工作节点 (DataNode, NodeManager, Kafka Broker, Flink TaskManager)
+117.72.69.244 node2
+192.140.175.163 node3
